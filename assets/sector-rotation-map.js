@@ -54,25 +54,29 @@
 
   const drawBase = (svg) => {
     svg.replaceChildren();
-    const defs = svgNode("defs");
-    const filter = svgNode("filter", { id: "srm-glow", x: "-100%", y: "-100%", width: "300%", height: "300%" });
-    filter.appendChild(svgNode("feGaussianBlur", { stdDeviation: "5", result: "blur" }));
-    const merge = svgNode("feMerge");
-    merge.appendChild(svgNode("feMergeNode", { in: "blur" }));
-    merge.appendChild(svgNode("feMergeNode", { in: "SourceGraphic" }));
-    filter.appendChild(merge);
-    defs.appendChild(filter);
-    svg.appendChild(defs);
-
+    const platformLayer = svgNode("g", { class: "srm-platform-layer", "aria-hidden": "true" });
     [
-      [70, 50, 440, 270, "improving", "02"],
-      [510, 50, 440, 270, "leading", "01"],
-      [70, 320, 440, 270, "lagging", "03"],
-      [510, 320, 440, 270, "weakening", "04"],
-    ].forEach(([x, y, width, height, quadrant, index]) => {
-      svg.appendChild(svgNode("rect", { x, y, width, height, class: `srm-zone srm-zone--${quadrant}` }));
-      addText(svg, index, x + width / 2, y + height / 2 + 28, `srm-quadrant-index srm-quadrant-index--${quadrant}`, "middle");
+      [70, 50, 440, 270, "improving", "02", 14],
+      [510, 50, 440, 270, "leading", "01", 24],
+      [70, 320, 440, 270, "lagging", "03", 8],
+      [510, 320, 440, 270, "weakening", "04", 17],
+    ].forEach(([x, y, width, height, quadrant, index, depth]) => {
+      const platform = svgNode("g", { class: `srm-platform srm-platform--${quadrant}` });
+      platform.append(
+        svgNode("polygon", {
+          points: `${x},${y + height} ${x + width},${y + height} ${x + width + depth},${y + height + depth} ${x + depth},${y + height + depth}`,
+          class: "srm-platform-front",
+        }),
+        svgNode("polygon", {
+          points: `${x + width},${y} ${x + width + depth},${y + depth} ${x + width + depth},${y + height + depth} ${x + width},${y + height}`,
+          class: "srm-platform-side",
+        }),
+        svgNode("rect", { x, y, width, height, class: `srm-zone srm-zone--${quadrant} srm-platform-top` }),
+      );
+      platformLayer.appendChild(platform);
+      addText(platform, index, x + width / 2, y + height / 2 + 28, `srm-quadrant-index srm-quadrant-index--${quadrant}`, "middle");
     });
+    svg.appendChild(platformLayer);
 
     for (let value = 96; value <= 104; value += 1) {
       const x = scaleX(value);
@@ -109,7 +113,7 @@
     const trailsLayer = svg.querySelector("[data-srm-trails-layer]");
     const pointsLayer = svg.querySelector("[data-srm-points-layer]");
     const existingTrails = new Map(
-      [...trailsLayer.querySelectorAll(".srm-light-path")]
+      [...trailsLayer.querySelectorAll(".srm-energy-rail")]
         .map((node) => [node.dataset.srmSymbol, node]),
     );
     const existingPoints = new Map(
@@ -124,32 +128,22 @@
       const color = colorFor(point);
       const trail = Array.isArray(point.trail) ? point.trail : [];
       if (trail.length > 1) {
-        let lightPath = existingTrails.get(point.symbol);
-        if (!lightPath) {
-          lightPath = svgNode("g", {
-            class: "srm-light-path",
+        let energyRail = existingTrails.get(point.symbol);
+        if (!energyRail) {
+          energyRail = svgNode("path", {
+            class: "srm-energy-rail",
             "data-srm-symbol": point.symbol,
+            fill: "none",
+            pathLength: "1",
           });
-          trailsLayer.appendChild(lightPath);
+          energyRail.style.setProperty("--srm-token-color", color);
+          energyRail.setAttribute("data-srm-category", point.category || point.asset_class || "quadrant");
+          trailsLayer.appendChild(energyRail);
         }
-        const segmentCount = trail.length - 1;
-        while (lightPath.children.length < segmentCount) {
-          lightPath.appendChild(svgNode("path", { class: "srm-light-segment" }));
-        }
-        while (lightPath.children.length > segmentCount) lightPath.lastElementChild.remove();
-        [...lightPath.children].forEach((segment, segmentIndex) => {
-          const from = trail[segmentIndex];
-          const to = trail[segmentIndex + 1];
-          const progress = (segmentIndex + 1) / segmentCount;
-          segment.setAttribute(
-            "d",
-            `M ${scaleX(from[1]).toFixed(2)} ${scaleY(from[2]).toFixed(2)} L ${scaleX(to[1]).toFixed(2)} ${scaleY(to[2]).toFixed(2)}`,
-          );
-          segment.setAttribute("stroke", color);
-          segment.setAttribute("stroke-opacity", (0.08 + progress * 0.78).toFixed(3));
-          segment.setAttribute("stroke-width", (1 + progress * 1.15).toFixed(2));
-        });
-        lightPath.setAttribute("data-srm-category", point.category || point.asset_class || "quadrant");
+        const railPath = trail.slice(-4)
+          .map((position, railIndex) => `${railIndex === 0 ? "M" : "L"} ${scaleX(position[1]).toFixed(2)} ${scaleY(position[2]).toFixed(2)}`)
+          .join(" ");
+        if (energyRail.getAttribute("d") !== railPath) energyRail.setAttribute("d", railPath);
       } else {
         existingTrails.get(point.symbol)?.remove();
       }
@@ -158,7 +152,6 @@
       const y = scaleY(point.y);
       const label = labelOffset(point, index);
       const classLabel = point.category_label || assetClassPalette[point.asset_class]?.label || "未分類";
-      const aria = `${point.label_zh_hant}，${classLabel}，${quadrantLabels[quadrant]}，相對趨勢 ${number.format(point.x)}，相對動能 ${number.format(point.y)}`;
       let group = existingPoints.get(point.symbol);
       if (!group) {
         group = svgNode("g", {
@@ -167,38 +160,46 @@
           role: "img",
           "data-srm-symbol": point.symbol,
         });
-        const halo = svgNode("circle", { cx: 0, cy: 0, r: 7.5, class: "srm-point-halo" });
-        const ring = svgNode("circle", { cx: 0, cy: 0, r: 5.2, class: "srm-point-ring" });
-        const dot = svgNode("circle", { cx: 0, cy: 0, r: 2.6, class: "srm-point-dot" });
-        dot.appendChild(svgNode("title"));
-        group.append(halo, ring, dot, svgNode("text", { x: 0, y: 0, class: "srm-point-label" }));
+        const title = svgNode("title");
+        title.textContent = `${point.label_zh_hant} (${point.symbol})`;
+        const beam = svgNode("line", { x1: 0, y1: 5, x2: 0, y2: 25, class: "srm-token-beam" });
+        const base = svgNode("ellipse", { cx: 0, cy: 7, rx: 7.5, ry: 2.6, class: "srm-token-base" });
+        const column = svgNode("polygon", {
+          points: "-4,3 -4,-9 0,-14 4,-9 4,3 0,6",
+          class: "srm-token-column",
+        });
+        const halo = svgNode("ellipse", { cx: 0, cy: -7, rx: 9, ry: 3.2, class: "srm-token-halo" });
+        const core = svgNode("circle", { cx: 0, cy: -10, r: 2.2, class: "srm-token-core" });
+        group.append(title, beam, base, column, halo, core, svgNode("text", { x: 0, y: 0, class: "srm-point-label" }));
         pointsLayer.appendChild(group);
       }
 
       group.__srmState = { point, quadrant, classLabel, x, y, onDrilldown };
-      group.setAttribute("transform", `translate(${x.toFixed(2)} ${y.toFixed(2)})`);
-      group.setAttribute("aria-label", aria);
-      group.setAttribute("role", point.drilldown_target ? "button" : "img");
-      group.setAttribute("data-srm-asset-class", point.asset_class || "quadrant");
-      if (point.category) group.setAttribute("data-srm-category", point.category);
-      else group.removeAttribute("data-srm-category");
-      if (point.drilldown_target) group.setAttribute("data-srm-drilldown-target", point.drilldown_target);
-      else group.removeAttribute("data-srm-drilldown-target");
-      group.style.setProperty("--delay", `${index * 28}ms`);
-      const halo = group.querySelector(".srm-point-halo");
-      const ring = group.querySelector(".srm-point-ring");
-      const dot = group.querySelector(".srm-point-dot");
-      const title = dot.querySelector("title");
+      const transform = `translate(${(x / 10).toFixed(3)}%, ${(y / 6.6).toFixed(3)}%)`;
+      if (group.style.transform !== transform) group.style.transform = transform;
+      if (!group.dataset.srmAccessible) {
+        group.setAttribute("aria-label", `${point.label_zh_hant}，${classLabel}`);
+        group.dataset.srmAccessible = "true";
+      }
+      const role = point.drilldown_target ? "button" : "img";
+      if (group.getAttribute("role") !== role) group.setAttribute("role", role);
+      if (!group.dataset.srmStyled) {
+        group.setAttribute("data-srm-asset-class", point.asset_class || "quadrant");
+        if (point.category) group.setAttribute("data-srm-category", point.category);
+        if (point.drilldown_target) group.setAttribute("data-srm-drilldown-target", point.drilldown_target);
+        group.style.setProperty("--delay", `${index * 28}ms`);
+        group.style.setProperty("--srm-token-color", color);
+        group.dataset.srmStyled = "true";
+      }
       const text = group.querySelector(".srm-point-label");
-      halo.setAttribute("fill", color);
-      ring.setAttribute("stroke", color);
-      dot.setAttribute("fill", color);
-      title.textContent = aria;
-      text.setAttribute("x", label.x);
-      text.setAttribute("y", label.y);
-      text.setAttribute("fill", color);
-      text.setAttribute("text-anchor", label.anchor);
-      text.textContent = point.label_zh_hant;
+      if (!text.dataset.srmStyled) {
+        text.setAttribute("x", label.x);
+        text.setAttribute("y", label.y);
+        text.setAttribute("fill", color);
+        text.setAttribute("text-anchor", label.anchor);
+        text.textContent = point.label_zh_hant;
+        text.dataset.srmStyled = "true";
+      }
 
       if (tooltip && !group.dataset.srmTooltipReady) {
         const showTooltip = () => {
@@ -248,7 +249,7 @@
 
   const updateOptionalText = (root, selector, value) => {
     const target = root.querySelector(selector);
-    if (target) target.textContent = value;
+    if (target && target.textContent !== value) target.textContent = value;
   };
 
   const drawLegend = (root, universe, points) => {
@@ -315,20 +316,24 @@
     if (!hasTimeline(horizonPayload)) return horizonPayload.points;
     const { dates, series } = horizonPayload.timeline;
     const metadata = new Map(horizonPayload.points.map((point) => [point.symbol, point]));
-    return series.map((item) => {
+    return series.flatMap((item) => {
       const base = metadata.get(item.symbol) || { symbol: item.symbol, label_zh_hant: item.symbol };
-      const [x, y] = item.positions[frameIndex];
+      const current = item.positions[frameIndex];
+      if (!Array.isArray(current)) return [];
+      const [x, y] = current;
       const start = Math.max(0, frameIndex - 11);
       const trail = item.positions
         .slice(start, frameIndex + 1)
-        .map((position, offset) => [dates[start + offset], position[0], position[1]]);
-      return {
+        .flatMap((position, offset) => (
+          Array.isArray(position) ? [[dates[start + offset], position[0], position[1]]] : []
+        ));
+      return [{
         ...base,
         x,
         y,
         quadrant: quadrantFor({ x, y }),
         trail,
-      };
+      }];
     });
   };
 
@@ -389,6 +394,7 @@
       let playbackTimer = null;
       let activeCategory = null;
       let returnUniverseId = null;
+      let renderedChromeSignature = null;
 
       const syncMotionDuration = () => {
         const speed = Number(speedSelect?.value || 1);
@@ -420,7 +426,7 @@
         .find((universe) => universe.drilldown_universe_id === universeId);
 
       const stopPlayback = () => {
-        if (playbackTimer !== null) window.clearInterval(playbackTimer);
+        if (playbackTimer !== null) window.cancelAnimationFrame(playbackTimer);
         playbackTimer = null;
         if (playButton) {
           playButton.textContent = "▶ 播放";
@@ -435,10 +441,10 @@
         }
         historyPanel.hidden = false;
         const dates = horizonPayload.timeline.dates;
-        timelineInput.min = "0";
-        timelineInput.max = String(dates.length - 1);
+        if (timelineInput.min !== "0") timelineInput.min = "0";
+        if (timelineInput.max !== String(dates.length - 1)) timelineInput.max = String(dates.length - 1);
         timelineInput.value = String(frameIndex);
-        timelineInput.setAttribute("value", String(frameIndex));
+        if (timelineInput.getAttribute("value") !== String(frameIndex)) timelineInput.setAttribute("value", String(frameIndex));
         updateOptionalText(root, "[data-srm-date]", dates[frameIndex]);
         updateOptionalText(root, "[data-srm-date-start]", dates[0]);
         updateOptionalText(root, "[data-srm-date-end]", dates.at(-1));
@@ -504,15 +510,22 @@
           render();
         };
         drawPoints(root, chart, points, activateDrilldown);
-        drawLegend(root, universe, points);
-        syncDrilldown(universe);
+        const nextChromeSignature = `${universe.id}:${activeCategory || "all"}:${points.map(({ symbol }) => symbol).join(",")}`;
+        if (nextChromeSignature !== renderedChromeSignature) {
+          drawLegend(root, universe, points);
+          syncDrilldown(universe);
+          renderedChromeSignature = nextChromeSignature;
+        }
         syncTimeline(horizonPayload, frameIndex);
-        chart.dataset.srmRendered = Array.isArray(universe.categories) && universe.categories.length > 0
+        const renderedState = Array.isArray(universe.categories) && universe.categories.length > 0
           ? `${universe.id}:${horizon}:${activeCategory || "all"}`
           : `${universe.id}:${horizon}`;
-        chart.dataset.srmFrameDate = selectedDate || horizonPayload.as_of_market_date || snapshot.as_of_market_date;
-        chart.setAttribute("aria-label", `${universe.title_zh_hant} ${horizon}日 ${chart.dataset.srmFrameDate} 輪動象限圖`);
-        updateOptionalText(root, "[data-srm-leader]", trendLeader.label_zh_hant);
+        if (chart.dataset.srmRendered !== renderedState) chart.dataset.srmRendered = renderedState;
+        const frameDate = selectedDate || horizonPayload.as_of_market_date || snapshot.as_of_market_date;
+        if (chart.dataset.srmFrameDate !== frameDate) chart.dataset.srmFrameDate = frameDate;
+        const chartLabel = `${universe.title_zh_hant} ${horizon}日 ${frameDate} 輪動象限圖`;
+        if (chart.getAttribute("aria-label") !== chartLabel) chart.setAttribute("aria-label", chartLabel);
+        updateOptionalText(root, "[data-srm-leader]", trendLeader?.label_zh_hant || "—");
         updateOptionalText(root, "[data-srm-leading-count]", String(leadingCount).padStart(2, "0"));
         updateOptionalText(root, "[data-srm-horizon-label]", `${horizon}D`);
       };
@@ -528,19 +541,31 @@
           render();
         }
         const speed = Number(speedSelect?.value || 1);
+        const frameInterval = Math.round(playbackBaseIntervalMs / speed);
+        let lastFrameTime = null;
         syncMotionDuration();
         playButton.textContent = "❚❚ 暫停";
         playButton.setAttribute("aria-pressed", "true");
-        playbackTimer = window.setInterval(() => {
-          index += 1;
-          if (index >= dates.length) {
-            stopPlayback();
-            return;
+        const tick = (timestamp) => {
+          if (playbackTimer === null) return;
+          if (lastFrameTime === null) lastFrameTime = timestamp;
+          if (timestamp - lastFrameTime >= frameInterval) {
+            lastFrameTime = timestamp;
+            index += 1;
+            if (index >= dates.length) {
+              stopPlayback();
+              return;
+            }
+            selectedDate = dates[index];
+            render();
+            if (index === dates.length - 1) {
+              stopPlayback();
+              return;
+            }
           }
-          selectedDate = dates[index];
-          render();
-          if (index === dates.length - 1) stopPlayback();
-        }, Math.round(playbackBaseIntervalMs / speed));
+          playbackTimer = window.requestAnimationFrame(tick);
+        };
+        playbackTimer = window.requestAnimationFrame(tick);
       };
 
       universeSelect.addEventListener("change", () => {

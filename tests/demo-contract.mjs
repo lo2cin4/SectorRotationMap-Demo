@@ -66,13 +66,13 @@ test("synthetic snapshot exposes the complete UI contract without market data", 
     assert.deepEqual(Object.keys(universe.horizons), ["20", "60", "120"]);
     Object.values(universe.horizons).forEach(({ points, timeline }) => {
       assert.equal(points.length, universe.member_count);
-      assert.equal(timeline.dates.length, 520);
-      assert.equal(timeline.dates[0], "2024-07-22");
+      assert.equal(timeline.dates.length, 1968);
+      assert.equal(timeline.dates[0], "2019-01-02");
       assert.equal(timeline.dates.at(-1), "2026-07-17");
       assert.equal(timeline.series.length, universe.member_count);
       timeline.series.forEach((series) => {
         assert.equal(series.positions.length, timeline.dates.length);
-        series.positions.forEach(([x, y]) => {
+        series.positions.filter(Boolean).forEach(([x, y]) => {
           assert.ok(x >= 96.2 && x <= 103.8);
           assert.ok(y >= 96.2 && y <= 103.8);
         });
@@ -86,6 +86,9 @@ test("synthetic snapshot exposes the complete UI contract without market data", 
       });
     });
   });
+  const ihakHistory = usIndustries.horizons["60"].timeline.series.find(({ symbol }) => symbol === "IHAK");
+  assert.ok(ihakHistory.positions.some((position) => position === null));
+  assert.ok(ihakHistory.positions.at(-1));
 });
 
 test("public page makes synthetic status and all controls explicit", async () => {
@@ -109,7 +112,8 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(html, /<option value="2">2×<\/option>/);
   assert.doesNotMatch(html, /<option value="4">4×<\/option>/);
   assert.match(dashboardJs, /const playbackBaseIntervalMs = 200;/);
-  assert.match(dashboardJs, /Math\.round\(playbackBaseIntervalMs \/ speed\)/);
+  assert.match(dashboardJs, /requestAnimationFrame/);
+  assert.doesNotMatch(dashboardJs, /setInterval/);
   assert.doesNotMatch(dashboardJs, /Math\.round\(800 \/ speed\)/);
   assert.match(html, /data-srm-legend/);
   assert.match(html, /data-srm-drilldown/);
@@ -121,17 +125,21 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(html, /AdjClose/);
   assert.match(html, /RMS<sub>252<\/sub>/);
   assert.match(html, /並非 JdK RRG 或 XQ/);
-  assert.match(html, /data-srm-design="lo2cin4-editorial-v2"/);
+  assert.match(html, /data-srm-design="isometric-city-v1"/);
   assert.match(html, /class="srm-workbench"/);
   assert.match(html, /class="srm-chart-head"/);
   assert.match(html, /RELATIVE TREND MATRIX/);
   assert.match(dashboardCss, /--srm-brand-gold:/);
   assert.match(dashboardCss, /\.srm-workbench/);
   assert.match(dashboardCss, /\.srm-chart-head/);
-  assert.match(dashboardCss, /\.srm-light-segment/);
+  assert.match(dashboardCss, /\.srm-platform--leading/);
+  assert.match(dashboardCss, /\.srm-token-column/);
+  assert.match(dashboardCss, /\.srm-energy-rail/);
   assert.match(dashboardCss, /\.srm-drilldown/);
-  assert.match(dashboardJs, /class: "srm-light-segment"/);
-  assert.doesNotMatch(dashboardJs, /class: "srm-trail"/);
+  assert.match(dashboardJs, /class: "srm-energy-rail"/);
+  assert.match(dashboardJs, /class: "srm-token-column"/);
+  assert.doesNotMatch(dashboardJs, /class: "srm-light-segment"/);
+  assert.doesNotMatch(dashboardJs, /feGaussianBlur/);
   assert.match(dashboardCss, /font-family: var\(--srm-brand-serif\)/);
   assert.match(demoCss, /lo2cin4/);
   assert.doesNotMatch(html, /snapshots\/latest\.json|sector_rotation\.sqlite3|yfinance/i);

@@ -128,13 +128,14 @@ const universeDefinitions = [
 
 const buildTradingDates = () => {
   const dates = [];
-  const cursor = new Date(Date.UTC(2026, 6, 17));
-  while (dates.length < 520) {
+  const cursor = new Date(Date.UTC(2019, 0, 2));
+  const end = new Date(Date.UTC(2026, 6, 17));
+  while (cursor <= end) {
     const day = cursor.getUTCDay();
     if (day !== 0 && day !== 6) dates.push(cursor.toISOString().slice(0, 10));
-    cursor.setUTCDate(cursor.getUTCDate() - 1);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
-  return dates.reverse();
+  return dates;
 };
 
 const positionAt = (memberIndex, universeIndex, horizon, dateIndex, totalDates) => {
@@ -158,7 +159,11 @@ const positionAt = (memberIndex, universeIndex, horizon, dateIndex, totalDates) 
 const buildHorizon = (universe, universeIndex, horizon, dates) => {
   const series = universe.members.map((item, memberIndex) => ({
     symbol: item.symbol,
-    positions: dates.map((_, dateIndex) => positionAt(memberIndex, universeIndex, horizon, dateIndex, dates.length)),
+    positions: dates.map((date, dateIndex) => (
+      item.symbol === "IHAK" && date < "2021-02-26"
+        ? null
+        : positionAt(memberIndex, universeIndex, horizon, dateIndex, dates.length)
+    )),
   }));
   const lastIndex = dates.length - 1;
   const trailIndexes = Array.from({ length: 12 }, (_, index) => lastIndex - (11 - index) * 5);
@@ -188,7 +193,7 @@ export const buildSyntheticSnapshot = () => {
   const dates = buildTradingDates();
   return {
     schema_version: "rotation-snapshot-v1",
-    snapshot_id: "srm-synthetic-design-demo-v4",
+    snapshot_id: "srm-synthetic-design-demo-v5",
     publication_state: "valid",
     as_of_market_date: "SYNTHETIC · NOT LIVE",
     provider: {

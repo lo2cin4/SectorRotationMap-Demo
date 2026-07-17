@@ -26,13 +26,14 @@ const artifacts = path.join(__dirname, "artifacts");
     await page.goto(baseUrl, { waitUntil: "networkidle" });
     await page.locator('[data-srm-rendered="global_assets:60"]').waitFor();
     assert.equal(await page.locator(".srm-point").count(), 21);
-    assert.equal(await page.locator(".srm-light-path").count(), 21);
-    assert.equal(await page.locator(".srm-light-segment").count(), 231);
+    assert.equal(await page.locator(".srm-energy-rail").count(), 21);
+    assert.equal(await page.locator(".srm-token-column").count(), 21);
+    assert.equal(await page.locator(".srm-platform").count(), 4);
     assert.equal(await page.locator(".srm-legend-item").count(), 3);
     assert.match(await page.locator(".demo-banner").innerText(), /SYNTHETIC DEMO/);
-    assert.equal(await page.locator("[data-srm-timeline]").getAttribute("max"), "519");
+    assert.equal(await page.locator("[data-srm-timeline]").getAttribute("max"), "1967");
     assert.equal(await page.locator("[data-srm-date]").innerText(), "2026-07-17");
-    assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-design"), "lo2cin4-editorial-v2");
+    assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-design"), "isometric-city-v1");
     assert.equal(await page.locator(".srm-workbench").isVisible(), true);
     assert.equal(await page.locator(".srm-chart-head").isVisible(), true);
     const visualContract = await page.locator("[data-srm-root]").evaluate((root) => ({
@@ -79,7 +80,7 @@ const artifacts = path.join(__dirname, "artifacts");
     }, symbol);
     await page.evaluate((symbol) => {
       window.__srmStablePlaybackPoint = document.querySelector(`.srm-point[data-srm-symbol="${symbol}"]`);
-      window.__srmStableLightPath = document.querySelector(`.srm-light-path[data-srm-symbol="${symbol}"]`);
+      window.__srmStableEnergyRail = document.querySelector(`.srm-energy-rail[data-srm-symbol="${symbol}"]`);
     }, motionSymbol);
     const startCenter = await centerOf(motionSymbol);
     await page.locator("[data-srm-timeline]").fill("251");
@@ -88,14 +89,14 @@ const artifacts = path.join(__dirname, "artifacts");
       const style = getComputedStyle(point);
       return {
         sameNode: point === window.__srmStablePlaybackPoint,
-        sameLightPath: document.querySelector(`.srm-light-path[data-srm-symbol="${symbol}"]`) === window.__srmStableLightPath,
+        sameEnergyRail: document.querySelector(`.srm-energy-rail[data-srm-symbol="${symbol}"]`) === window.__srmStableEnergyRail,
         opacity: Number(style.opacity),
         transitionDuration: style.transitionDuration,
         transitionProperty: style.transitionProperty,
       };
     }, motionSymbol);
     assert.equal(smoothFrame.sameNode, true);
-    assert.equal(smoothFrame.sameLightPath, true);
+    assert.equal(smoothFrame.sameEnergyRail, true);
     assert.equal(smoothFrame.opacity, 1);
     assert.equal(smoothFrame.transitionDuration, "0.18s");
     assert.match(smoothFrame.transitionProperty, /transform/);
@@ -126,6 +127,7 @@ const artifacts = path.join(__dirname, "artifacts");
     await page.locator("[data-srm-play]").click();
     assert.equal(await page.locator("[data-srm-play]").getAttribute("aria-pressed"), "false");
 
+    await page.locator("[data-srm-timeline]").fill("1967");
     await page.locator("[data-srm-universe]").selectOption("us_sectors");
     await page.locator('[data-srm-rendered="us_sectors:60"]').waitFor();
     assert.equal(await page.locator(".srm-point").count(), 11);
@@ -178,7 +180,7 @@ const artifacts = path.join(__dirname, "artifacts");
       await mobile.locator(".srm-point").first().evaluate((node) => getComputedStyle(node).transitionDuration),
       "0s",
     );
-    assert.equal(await mobile.locator("[data-srm-root]").getAttribute("data-srm-design"), "lo2cin4-editorial-v2");
+    assert.equal(await mobile.locator("[data-srm-root]").getAttribute("data-srm-design"), "isometric-city-v1");
     await mobile.screenshot({ path: path.join(artifacts, "sector-rotation-editorial-mobile.png"), fullPage: true });
     await mobile.locator("[data-srm-method] summary").click();
     assert.equal(await mobile.locator("[data-srm-method]").getAttribute("open"), "");
@@ -195,7 +197,7 @@ const artifacts = path.join(__dirname, "artifacts");
     console.log(JSON.stringify({
       status: "pass",
       url: baseUrl,
-      interactions: ["method:hover-focus-click", "timeline:scrub", "timeline:smooth-node-continuity", "timeline:play-pause", "speed:0.5x-2x", "universe:us_sectors", "drilldown:pointer-keyboard", "industry-filter:technology-all", "trail:gradient-light-path", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
+      interactions: ["method:hover-focus-click", "timeline:2019-scrub", "timeline:smooth-node-continuity", "timeline:raf-play-pause", "speed:0.5x-2x", "universe:us_sectors", "drilldown:pointer-keyboard", "industry-filter:technology-all", "visual:isometric-platforms-energy-rails", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
       screenshots: ["sector-rotation-editorial-desktop.png", "sector-rotation-global-desktop.png", "sector-rotation-industry-technology.png", "sector-rotation-desktop.png", "sector-rotation-editorial-mobile.png", "sector-rotation-industry-mobile.png", "sector-rotation-mobile.png"],
       console_errors: errors,
     }));
