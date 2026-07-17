@@ -298,7 +298,8 @@
 
       const syncMotionDuration = () => {
         const speed = Number(speedSelect?.value || 1);
-        const duration = Math.min(650, Math.max(140, Math.round(600 / speed)));
+        const frameInterval = Math.round(800 / speed);
+        const duration = Math.max(140, Math.round(frameInterval * 0.9));
         chart.style.setProperty("--srm-frame-duration", `${duration}ms`);
       };
 

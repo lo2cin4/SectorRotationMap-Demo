@@ -64,11 +64,13 @@ const artifacts = path.join(__dirname, "artifacts");
       return {
         sameNode: point === window.__srmStablePlaybackPoint,
         opacity: Number(style.opacity),
+        transitionDuration: style.transitionDuration,
         transitionProperty: style.transitionProperty,
       };
     }, motionSymbol);
     assert.equal(smoothFrame.sameNode, true);
     assert.equal(smoothFrame.opacity, 1);
+    assert.equal(smoothFrame.transitionDuration, "0.72s");
     assert.match(smoothFrame.transitionProperty, /transform/);
     await page.waitForTimeout(100);
     const middleCenter = await centerOf(motionSymbol);
@@ -81,6 +83,10 @@ const artifacts = path.join(__dirname, "artifacts");
 
     await page.locator("[data-srm-speed]").selectOption("4");
     assert.equal(await page.locator("[data-srm-speed]").inputValue(), "4");
+    assert.equal(
+      await page.locator(".srm-point").first().evaluate((node) => getComputedStyle(node).transitionDuration),
+      "0.18s",
+    );
     const beforePlayback = Number(await page.locator("[data-srm-timeline]").getAttribute("value"));
     await page.locator("[data-srm-play]").click();
     await page.waitForFunction((before) => Number(document.querySelector("[data-srm-timeline]").value) > before, beforePlayback);
