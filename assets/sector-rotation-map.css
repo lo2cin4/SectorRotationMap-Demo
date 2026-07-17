@@ -319,6 +319,7 @@
 .srm-speed select:focus-visible,
 .srm-history input:focus-visible,
 .srm-method summary:focus-visible,
+.srm-drilldown button:focus-visible,
 .srm-point:focus-visible {
   outline: 2px solid var(--srm-brand-focus);
   outline-offset: 3px;
@@ -349,6 +350,61 @@
   color: #051116;
   background: linear-gradient(135deg, #61e7df, #44b8ec);
   box-shadow: 0 7px 24px rgba(48, 216, 208, 0.2);
+}
+
+.srm-drilldown {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 14px;
+  padding: 12px;
+  background: rgba(85, 215, 243, 0.035);
+  border: 1px solid rgba(85, 215, 243, 0.16);
+  border-radius: 9px;
+}
+
+.srm-drilldown[hidden],
+.srm-drilldown-back[hidden] { display: none; }
+
+.srm-drilldown > div > span {
+  display: block;
+  margin-bottom: 7px;
+  color: #7188a5;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.srm-drilldown-back,
+.srm-category-filters button {
+  color: #91a8c3;
+  background: transparent;
+  border: 1px solid rgba(145, 168, 195, 0.2);
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.srm-drilldown-back { padding: 8px 11px; }
+
+.srm-category-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.srm-category-filters button {
+  padding: 6px 9px;
+  border-color: color-mix(in srgb, var(--srm-category-color, #91a8c3) 34%, transparent);
+}
+
+.srm-category-filters button.is-active {
+  color: #04080d;
+  background: var(--srm-category-color, #d8b169);
+  border-color: var(--srm-category-color, #d8b169);
 }
 
 .srm-legend {
@@ -560,16 +616,13 @@
 .srm-quadrant-index--weakening { fill: #eeb84a; }
 .srm-quadrant-index--lagging { fill: #a98dff; }
 
-.srm-trail {
+.srm-light-path { pointer-events: none; }
+
+.srm-light-segment {
   fill: none;
-  stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 1;
-  opacity: 0.62;
   filter: url(#srm-glow);
-  animation: srm-trace 0.8s ease-out both;
-  animation-delay: var(--delay);
   transition: d var(--srm-frame-duration, 600ms) linear;
 }
 
@@ -584,7 +637,9 @@
   animation-delay: var(--delay);
 }
 
-.srm-point-halo { opacity: 0.13; filter: url(#srm-glow); }
+.srm-point[data-srm-drilldown-target] { cursor: pointer; }
+.srm-point-halo { opacity: 0.09; filter: url(#srm-glow); }
+.srm-point-ring { fill: none; stroke-width: 1.2; opacity: 0.72; }
 .srm-point-dot { filter: url(#srm-glow); }
 .srm-point-label {
   paint-order: stroke;
@@ -649,11 +704,6 @@
   to { opacity: 1; }
 }
 
-@keyframes srm-trace {
-  from { opacity: 0; stroke-dashoffset: 1; }
-  to { opacity: 0.62; stroke-dashoffset: 0; }
-}
-
 @keyframes srm-method-reveal {
   from { opacity: 0; transform: translateY(-5px); }
   to { opacity: 1; transform: translateY(0); }
@@ -662,6 +712,7 @@
 @media (max-width: 760px) {
   .srm-shell { padding: 18px 14px; border-radius: 18px; }
   .srm-header, .srm-toolbar, .srm-footer { align-items: stretch; flex-direction: column; }
+  .srm-drilldown { grid-template-columns: 1fr; }
   .srm-header-copy { width: 100%; }
   .srm-status { align-self: flex-start; }
   .srm-method { width: 100%; }
@@ -690,7 +741,7 @@
   .srm-method summary,
   .srm-method-toggle,
   .srm-method-popover { animation: none; transition: none; }
-  .srm-trail { animation: none; opacity: 0.62; transition: none; }
+  .srm-light-segment { transition: none; }
   .srm-point { animation: none; opacity: 1; transition: none; }
 }
 
@@ -931,6 +982,35 @@
   color: #171108;
   background: var(--srm-brand-gold);
   box-shadow: none;
+}
+
+.srm-shell[data-srm-design="lo2cin4-editorial-v2"] .srm-drilldown {
+  gap: 18px;
+  margin: 0;
+  padding: 13px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--srm-rule-soft);
+  border-radius: 0;
+}
+
+.srm-shell[data-srm-design="lo2cin4-editorial-v2"] .srm-drilldown > div > span {
+  color: var(--srm-faint);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+}
+
+.srm-shell[data-srm-design="lo2cin4-editorial-v2"] .srm-drilldown-back,
+.srm-shell[data-srm-design="lo2cin4-editorial-v2"] .srm-category-filters button {
+  color: #8f877a;
+  border-color: var(--srm-rule);
+  border-radius: 3px;
+}
+
+.srm-shell[data-srm-design="lo2cin4-editorial-v2"] .srm-category-filters button.is-active {
+  color: #090704;
+  background: var(--srm-category-color, var(--srm-brand-gold));
+  border-color: var(--srm-category-color, var(--srm-brand-gold));
 }
 
 .srm-shell[data-srm-design="lo2cin4-editorial-v2"] .srm-legend {

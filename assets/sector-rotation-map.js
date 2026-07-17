@@ -104,12 +104,12 @@
     };
   };
 
-  const drawPoints = (root, svg, points) => {
+  const drawPoints = (root, svg, points, onDrilldown) => {
     const tooltip = root.querySelector("[data-srm-tooltip]");
     const trailsLayer = svg.querySelector("[data-srm-trails-layer]");
     const pointsLayer = svg.querySelector("[data-srm-points-layer]");
     const existingTrails = new Map(
-      [...trailsLayer.querySelectorAll(".srm-trail")]
+      [...trailsLayer.querySelectorAll(".srm-light-path")]
         .map((node) => [node.dataset.srmSymbol, node]),
     );
     const existingPoints = new Map(
@@ -124,22 +124,32 @@
       const color = colorFor(point);
       const trail = Array.isArray(point.trail) ? point.trail : [];
       if (trail.length > 1) {
-        const pathData = trail
-          .map((item, trailIndex) => `${trailIndex === 0 ? "M" : "L"} ${scaleX(item[1]).toFixed(2)} ${scaleY(item[2]).toFixed(2)}`)
-          .join(" ");
-        let path = existingTrails.get(point.symbol);
-        if (!path) {
-          path = svgNode("path", {
-            class: "srm-trail",
-            pathLength: "1",
+        let lightPath = existingTrails.get(point.symbol);
+        if (!lightPath) {
+          lightPath = svgNode("g", {
+            class: "srm-light-path",
             "data-srm-symbol": point.symbol,
           });
-          trailsLayer.appendChild(path);
+          trailsLayer.appendChild(lightPath);
         }
-        path.setAttribute("d", pathData);
-        path.setAttribute("stroke", color);
-        path.setAttribute("data-srm-asset-class", point.asset_class || "quadrant");
-        path.style.setProperty("--delay", `${index * 28}ms`);
+        const segmentCount = trail.length - 1;
+        while (lightPath.children.length < segmentCount) {
+          lightPath.appendChild(svgNode("path", { class: "srm-light-segment" }));
+        }
+        while (lightPath.children.length > segmentCount) lightPath.lastElementChild.remove();
+        [...lightPath.children].forEach((segment, segmentIndex) => {
+          const from = trail[segmentIndex];
+          const to = trail[segmentIndex + 1];
+          const progress = (segmentIndex + 1) / segmentCount;
+          segment.setAttribute(
+            "d",
+            `M ${scaleX(from[1]).toFixed(2)} ${scaleY(from[2]).toFixed(2)} L ${scaleX(to[1]).toFixed(2)} ${scaleY(to[2]).toFixed(2)}`,
+          );
+          segment.setAttribute("stroke", color);
+          segment.setAttribute("stroke-opacity", (0.08 + progress * 0.78).toFixed(3));
+          segment.setAttribute("stroke-width", (1 + progress * 1.15).toFixed(2));
+        });
+        lightPath.setAttribute("data-srm-category", point.category || point.asset_class || "quadrant");
       } else {
         existingTrails.get(point.symbol)?.remove();
       }
@@ -147,7 +157,7 @@
       const x = scaleX(point.x);
       const y = scaleY(point.y);
       const label = labelOffset(point, index);
-      const classLabel = assetClassPalette[point.asset_class]?.label || "未分類";
+      const classLabel = point.category_label || assetClassPalette[point.asset_class]?.label || "未分類";
       const aria = `${point.label_zh_hant}，${classLabel}，${quadrantLabels[quadrant]}，相對趨勢 ${number.format(point.x)}，相對動能 ${number.format(point.y)}`;
       let group = existingPoints.get(point.symbol);
       if (!group) {
@@ -157,23 +167,31 @@
           role: "img",
           "data-srm-symbol": point.symbol,
         });
-        const halo = svgNode("circle", { cx: 0, cy: 0, r: 12, class: "srm-point-halo" });
-        const dot = svgNode("circle", { cx: 0, cy: 0, r: 5.2, class: "srm-point-dot" });
+        const halo = svgNode("circle", { cx: 0, cy: 0, r: 7.5, class: "srm-point-halo" });
+        const ring = svgNode("circle", { cx: 0, cy: 0, r: 5.2, class: "srm-point-ring" });
+        const dot = svgNode("circle", { cx: 0, cy: 0, r: 2.6, class: "srm-point-dot" });
         dot.appendChild(svgNode("title"));
-        group.append(halo, dot, svgNode("text", { x: 0, y: 0, class: "srm-point-label" }));
+        group.append(halo, ring, dot, svgNode("text", { x: 0, y: 0, class: "srm-point-label" }));
         pointsLayer.appendChild(group);
       }
 
-      group.__srmState = { point, quadrant, classLabel, x, y };
+      group.__srmState = { point, quadrant, classLabel, x, y, onDrilldown };
       group.setAttribute("transform", `translate(${x.toFixed(2)} ${y.toFixed(2)})`);
       group.setAttribute("aria-label", aria);
+      group.setAttribute("role", point.drilldown_target ? "button" : "img");
       group.setAttribute("data-srm-asset-class", point.asset_class || "quadrant");
+      if (point.category) group.setAttribute("data-srm-category", point.category);
+      else group.removeAttribute("data-srm-category");
+      if (point.drilldown_target) group.setAttribute("data-srm-drilldown-target", point.drilldown_target);
+      else group.removeAttribute("data-srm-drilldown-target");
       group.style.setProperty("--delay", `${index * 28}ms`);
       const halo = group.querySelector(".srm-point-halo");
+      const ring = group.querySelector(".srm-point-ring");
       const dot = group.querySelector(".srm-point-dot");
       const title = dot.querySelector("title");
       const text = group.querySelector(".srm-point-label");
       halo.setAttribute("fill", color);
+      ring.setAttribute("stroke", color);
       dot.setAttribute("fill", color);
       title.textContent = aria;
       text.setAttribute("x", label.x);
@@ -203,6 +221,21 @@
         group.addEventListener("blur", hideTooltip);
         group.dataset.srmTooltipReady = "true";
       }
+      if (!group.dataset.srmDrilldownReady) {
+        const activateDrilldown = () => {
+          const state = group.__srmState;
+          if (state.point.drilldown_target && typeof state.onDrilldown === "function") {
+            state.onDrilldown(state.point);
+          }
+        };
+        group.addEventListener("click", activateDrilldown);
+        group.addEventListener("keydown", (event) => {
+          if (!group.__srmState.point.drilldown_target || !["Enter", " "].includes(event.key)) return;
+          event.preventDefault();
+          activateDrilldown();
+        });
+        group.dataset.srmDrilldownReady = "true";
+      }
     });
 
     existingTrails.forEach((node, symbol) => {
@@ -221,9 +254,17 @@
   const drawLegend = (root, universe, points) => {
     const legend = root.querySelector("[data-srm-legend]");
     if (!legend) return;
-    const configured = Array.isArray(universe.asset_classes) ? universe.asset_classes : [];
+    const configured = Array.isArray(universe.categories) && universe.categories.length > 0
+      ? universe.categories
+      : (Array.isArray(universe.asset_classes) ? universe.asset_classes : []);
+    const categoryMode = Array.isArray(universe.categories) && universe.categories.length > 0;
     const classes = configured.length > 0
       ? configured
+        .filter((item) => points.some((point) => (categoryMode ? point.category : point.asset_class) === item.id))
+        .map((item) => ({
+          ...item,
+          member_count: points.filter((point) => (categoryMode ? point.category : point.asset_class) === item.id).length,
+        }))
       : [...new Set(points.map((point) => point.asset_class).filter(Boolean))].map((id) => ({
         id,
         label_zh_hant: assetClassPalette[id]?.label || id,
@@ -258,6 +299,16 @@
     if (exact >= 0) return exact;
     const later = dates.findIndex((date) => date >= selectedDate);
     return later >= 0 ? later : dates.length - 1;
+  };
+
+  const decoratePoints = (universe, points) => {
+    const categories = new Map((universe.categories || []).map((category) => [category.id, category]));
+    return points.map((point) => {
+      const category = categories.get(point.category);
+      return category
+        ? { ...point, color: category.color, category_label: category.label_zh_hant }
+        : point;
+    });
   };
 
   const pointsAt = (horizonPayload, frameIndex) => {
@@ -326,6 +377,9 @@
       const chart = root.querySelector("[data-srm-chart]");
       const buttons = [...root.querySelectorAll("[data-srm-horizon]")];
       const historyPanel = root.querySelector("[data-srm-history]");
+      const drilldownPanel = root.querySelector("[data-srm-drilldown]");
+      const categoryFilters = root.querySelector("[data-srm-category-filters]");
+      const drilldownBack = root.querySelector("[data-srm-drilldown-back]");
       const timelineInput = root.querySelector("[data-srm-timeline]");
       const playButton = root.querySelector("[data-srm-play]");
       const speedSelect = root.querySelector("[data-srm-speed]");
@@ -333,6 +387,8 @@
       let horizon = "60";
       let selectedDate = null;
       let playbackTimer = null;
+      let activeCategory = null;
+      let returnUniverseId = null;
 
       const syncMotionDuration = () => {
         const speed = Number(speedSelect?.value || 1);
@@ -360,6 +416,9 @@
         return { universe, horizonPayload: universe.horizons[horizon] };
       };
 
+      const sourceUniverseFor = (universeId) => snapshot.universes
+        .find((universe) => universe.drilldown_universe_id === universeId);
+
       const stopPlayback = () => {
         if (playbackTimer !== null) window.clearInterval(playbackTimer);
         playbackTimer = null;
@@ -386,22 +445,71 @@
         updateOptionalText(root, "[data-srm-frame-count]", `${frameIndex + 1} / ${dates.length} 個交易日`);
       };
 
+      const syncDrilldown = (universe) => {
+        const categories = Array.isArray(universe.categories) ? universe.categories : [];
+        if (!drilldownPanel || !categoryFilters || categories.length === 0) {
+          if (drilldownPanel) drilldownPanel.hidden = true;
+          return;
+        }
+        drilldownPanel.hidden = false;
+        categoryFilters.replaceChildren();
+        const filters = [{ id: "all", label_zh_hant: "全部" }, ...categories];
+        filters.forEach((category) => {
+          const button = document.createElement("button");
+          const active = category.id === (activeCategory || "all");
+          button.type = "button";
+          button.dataset.srmCategory = category.id;
+          button.className = active ? "is-active" : "";
+          button.setAttribute("aria-pressed", String(active));
+          button.textContent = category.label_zh_hant;
+          if (category.color) button.style.setProperty("--srm-category-color", category.color);
+          button.addEventListener("click", () => {
+            stopPlayback();
+            activeCategory = category.id === "all" ? null : category.id;
+            render();
+          });
+          categoryFilters.appendChild(button);
+        });
+        const source = sourceUniverseFor(universe.id);
+        if (drilldownBack) drilldownBack.hidden = !source;
+      };
+
       const render = () => {
         const { universe, horizonPayload } = currentPayload();
         const dates = hasTimeline(horizonPayload) ? horizonPayload.timeline.dates : [];
         const frameIndex = dates.length > 0 ? closestDateIndex(dates, selectedDate) : -1;
         if (frameIndex >= 0) selectedDate = dates[frameIndex];
-        const points = frameIndex >= 0 ? pointsAt(horizonPayload, frameIndex) : horizonPayload.points;
+        const allPoints = decoratePoints(
+          universe,
+          frameIndex >= 0 ? pointsAt(horizonPayload, frameIndex) : horizonPayload.points,
+        );
+        if (activeCategory && !allPoints.some((point) => point.category === activeCategory)) activeCategory = null;
+        const points = activeCategory
+          ? allPoints.filter((point) => point.category === activeCategory)
+          : allPoints;
         const trendLeader = [...points].sort((a, b) => b.x - a.x)[0];
         const leadingCount = points.filter((point) => (point.quadrant || quadrantFor(point)) === "leading").length;
         if (!chart.dataset.srmBaseReady) {
           drawBase(chart);
           chart.dataset.srmBaseReady = "true";
         }
-        drawPoints(root, chart, points);
+        const activateDrilldown = (point) => {
+          if (!universe.drilldown_universe_id || !point.drilldown_target) return;
+          const target = snapshot.universes.find((item) => item.id === universe.drilldown_universe_id);
+          if (!target) return;
+          stopPlayback();
+          returnUniverseId = universe.id;
+          activeCategory = point.drilldown_target;
+          universeSelect.value = target.id;
+          render();
+        };
+        drawPoints(root, chart, points, activateDrilldown);
         drawLegend(root, universe, points);
+        syncDrilldown(universe);
         syncTimeline(horizonPayload, frameIndex);
-        chart.dataset.srmRendered = `${universe.id}:${horizon}`;
+        chart.dataset.srmRendered = Array.isArray(universe.categories) && universe.categories.length > 0
+          ? `${universe.id}:${horizon}:${activeCategory || "all"}`
+          : `${universe.id}:${horizon}`;
         chart.dataset.srmFrameDate = selectedDate || horizonPayload.as_of_market_date || snapshot.as_of_market_date;
         chart.setAttribute("aria-label", `${universe.title_zh_hant} ${horizon}日 ${chart.dataset.srmFrameDate} 輪動象限圖`);
         updateOptionalText(root, "[data-srm-leader]", trendLeader.label_zh_hant);
@@ -437,6 +545,18 @@
 
       universeSelect.addEventListener("change", () => {
         stopPlayback();
+        activeCategory = null;
+        returnUniverseId = null;
+        render();
+      });
+      drilldownBack?.addEventListener("click", () => {
+        const source = snapshot.universes.find((universe) => universe.id === returnUniverseId)
+          || sourceUniverseFor(universeSelect.value);
+        if (!source) return;
+        stopPlayback();
+        activeCategory = null;
+        returnUniverseId = null;
+        universeSelect.value = source.id;
         render();
       });
       buttons.forEach((button) => {

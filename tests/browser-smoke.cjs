@@ -26,6 +26,8 @@ const artifacts = path.join(__dirname, "artifacts");
     await page.goto(baseUrl, { waitUntil: "networkidle" });
     await page.locator('[data-srm-rendered="global_assets:60"]').waitFor();
     assert.equal(await page.locator(".srm-point").count(), 21);
+    assert.equal(await page.locator(".srm-light-path").count(), 21);
+    assert.equal(await page.locator(".srm-light-segment").count(), 231);
     assert.equal(await page.locator(".srm-legend-item").count(), 3);
     assert.match(await page.locator(".demo-banner").innerText(), /SYNTHETIC DEMO/);
     assert.equal(await page.locator("[data-srm-timeline]").getAttribute("max"), "519");
@@ -77,6 +79,7 @@ const artifacts = path.join(__dirname, "artifacts");
     }, symbol);
     await page.evaluate((symbol) => {
       window.__srmStablePlaybackPoint = document.querySelector(`.srm-point[data-srm-symbol="${symbol}"]`);
+      window.__srmStableLightPath = document.querySelector(`.srm-light-path[data-srm-symbol="${symbol}"]`);
     }, motionSymbol);
     const startCenter = await centerOf(motionSymbol);
     await page.locator("[data-srm-timeline]").fill("251");
@@ -85,12 +88,14 @@ const artifacts = path.join(__dirname, "artifacts");
       const style = getComputedStyle(point);
       return {
         sameNode: point === window.__srmStablePlaybackPoint,
+        sameLightPath: document.querySelector(`.srm-light-path[data-srm-symbol="${symbol}"]`) === window.__srmStableLightPath,
         opacity: Number(style.opacity),
         transitionDuration: style.transitionDuration,
         transitionProperty: style.transitionProperty,
       };
     }, motionSymbol);
     assert.equal(smoothFrame.sameNode, true);
+    assert.equal(smoothFrame.sameLightPath, true);
     assert.equal(smoothFrame.opacity, 1);
     assert.equal(smoothFrame.transitionDuration, "0.18s");
     assert.match(smoothFrame.transitionProperty, /transform/);
@@ -125,6 +130,31 @@ const artifacts = path.join(__dirname, "artifacts");
     await page.locator('[data-srm-rendered="us_sectors:60"]').waitFor();
     assert.equal(await page.locator(".srm-point").count(), 11);
 
+    await page.locator('.srm-point[data-srm-symbol="XLK"]').click();
+    await page.locator('[data-srm-rendered="us_industries:60:technology"]').waitFor();
+    assert.equal(await page.locator("[data-srm-universe]").inputValue(), "us_industries");
+    assert.equal(await page.locator(".srm-point").count(), 4);
+    assert.deepEqual(
+      await page.locator(".srm-point").evaluateAll((points) => points.map((point) => point.dataset.srmSymbol).sort()),
+      ["IGM", "IHAK", "SOXX", "XSW"],
+    );
+    assert.equal(await page.locator("[data-srm-drilldown]").isVisible(), true);
+    await page.screenshot({ path: path.join(artifacts, "sector-rotation-industry-technology.png"), fullPage: true });
+
+    await page.locator('[data-srm-category="all"]').click();
+    await page.locator('[data-srm-rendered="us_industries:60:all"]').waitFor();
+    assert.equal(await page.locator(".srm-point").count(), 20);
+
+    await page.locator("[data-srm-drilldown-back]").click();
+    await page.locator('[data-srm-rendered="us_sectors:60"]').waitFor();
+    await page.locator('.srm-point[data-srm-symbol="XLK"]').focus();
+    await page.keyboard.press("Enter");
+    await page.locator('[data-srm-rendered="us_industries:60:technology"]').waitFor();
+    assert.equal(await page.locator(".srm-point").count(), 4);
+
+    await page.locator("[data-srm-universe]").selectOption("us_sectors");
+    await page.locator('[data-srm-rendered="us_sectors:60"]').waitFor();
+
     await page.locator('[data-srm-horizon="120"]').click();
     await page.locator('[data-srm-rendered="us_sectors:120"]').waitFor();
     assert.equal(await page.locator('[data-srm-horizon="120"]').getAttribute("aria-pressed"), "true");
@@ -154,14 +184,19 @@ const artifacts = path.join(__dirname, "artifacts");
     assert.equal(await mobile.locator("[data-srm-method]").getAttribute("open"), "");
     assert.equal(await mobile.locator(".srm-method-popover").isVisible(), true);
     assert.equal(await mobile.locator(".srm-chart-wrap").evaluate((node) => node.scrollWidth > node.clientWidth), true);
+    await mobile.locator("[data-srm-universe]").selectOption("us_industries");
+    await mobile.locator('[data-srm-rendered="us_industries:60:all"]').waitFor();
+    assert.equal(await mobile.locator(".srm-point").count(), 20);
+    assert.equal(await mobile.locator("[data-srm-drilldown]").isVisible(), true);
+    await mobile.screenshot({ path: path.join(artifacts, "sector-rotation-industry-mobile.png"), fullPage: true });
     await mobile.screenshot({ path: path.join(artifacts, "sector-rotation-mobile.png"), fullPage: true });
 
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({
       status: "pass",
       url: baseUrl,
-      interactions: ["method:hover-focus-click", "timeline:scrub", "timeline:smooth-node-continuity", "timeline:play-pause", "speed:0.5x-2x", "universe:us_sectors", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
-      screenshots: ["sector-rotation-editorial-desktop.png", "sector-rotation-global-desktop.png", "sector-rotation-desktop.png", "sector-rotation-editorial-mobile.png", "sector-rotation-mobile.png"],
+      interactions: ["method:hover-focus-click", "timeline:scrub", "timeline:smooth-node-continuity", "timeline:play-pause", "speed:0.5x-2x", "universe:us_sectors", "drilldown:pointer-keyboard", "industry-filter:technology-all", "trail:gradient-light-path", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
+      screenshots: ["sector-rotation-editorial-desktop.png", "sector-rotation-global-desktop.png", "sector-rotation-industry-technology.png", "sector-rotation-desktop.png", "sector-rotation-editorial-mobile.png", "sector-rotation-industry-mobile.png", "sector-rotation-mobile.png"],
       console_errors: errors,
     }));
   } finally {

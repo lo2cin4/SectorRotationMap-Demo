@@ -14,7 +14,24 @@ const assetClassDefinitions = {
   commodity: { label_zh_hant: "商品", color: "#ffb547" },
 };
 
-const member = (symbol, label_zh_hant, asset_class) => ({ symbol, label_zh_hant, asset_class });
+const categoryDefinitions = [
+  { id: "technology", label_zh_hant: "資訊科技", color: "#55D7F3", parent_symbol: "XLK" },
+  { id: "communication_services", label_zh_hant: "通訊服務", color: "#9C8CFF", parent_symbol: "XLC" },
+  { id: "consumer_discretionary", label_zh_hant: "非必需消費", color: "#FF9F6E", parent_symbol: "XLY" },
+  { id: "energy", label_zh_hant: "能源", color: "#F5C451", parent_symbol: "XLE" },
+  { id: "financials", label_zh_hant: "金融", color: "#46D39A", parent_symbol: "XLF" },
+  { id: "health_care", label_zh_hant: "醫療保健", color: "#F26BAA", parent_symbol: "XLV" },
+  { id: "industrials", label_zh_hant: "工業", color: "#78A6FF", parent_symbol: "XLI" },
+  { id: "materials", label_zh_hant: "原材料", color: "#C99B66", parent_symbol: "XLB" },
+  { id: "real_estate", label_zh_hant: "房地產", color: "#B98CFF", parent_symbol: "XLRE" },
+];
+
+const member = (symbol, label_zh_hant, asset_class, metadata = {}) => ({
+  symbol,
+  label_zh_hant,
+  asset_class,
+  ...metadata,
+});
 
 const universeDefinitions = [
   {
@@ -49,18 +66,47 @@ const universeDefinitions = [
     id: "us_sectors",
     title_zh_hant: "美股板塊輪動",
     benchmark: "SYNTHETIC-BENCHMARK-B",
+    drilldown_universe_id: "us_industries",
     members: [
-      member("XLC", "通訊服務", "equity"),
-      member("XLY", "非必需消費", "equity"),
+      member("XLC", "通訊服務", "equity", { drilldown_target: "communication_services" }),
+      member("XLY", "非必需消費", "equity", { drilldown_target: "consumer_discretionary" }),
       member("XLP", "必需消費", "equity"),
-      member("XLE", "能源", "equity"),
-      member("XLF", "金融", "equity"),
-      member("XLV", "醫療保健", "equity"),
-      member("XLI", "工業", "equity"),
-      member("XLB", "原材料", "equity"),
-      member("XLRE", "房地產", "equity"),
-      member("XLK", "科技", "equity"),
+      member("XLE", "能源", "equity", { drilldown_target: "energy" }),
+      member("XLF", "金融", "equity", { drilldown_target: "financials" }),
+      member("XLV", "醫療保健", "equity", { drilldown_target: "health_care" }),
+      member("XLI", "工業", "equity", { drilldown_target: "industrials" }),
+      member("XLB", "原材料", "equity", { drilldown_target: "materials" }),
+      member("XLRE", "房地產", "equity", { drilldown_target: "real_estate" }),
+      member("XLK", "科技", "equity", { drilldown_target: "technology" }),
       member("XLU", "公用事業", "equity"),
+    ],
+  },
+  {
+    id: "us_industries",
+    title_zh_hant: "美股細分行業",
+    benchmark: "SYNTHETIC-BENCHMARK-B",
+    categories: categoryDefinitions,
+    members: [
+      member("SOXX", "半導體", "equity", { category: "technology" }),
+      member("XSW", "軟件與 IT 服務", "equity", { category: "technology" }),
+      member("IGM", "硬件與擴展科技", "equity", { category: "technology" }),
+      member("IHAK", "網絡安全", "equity", { category: "technology" }),
+      member("XTL", "電訊", "equity", { category: "communication_services" }),
+      member("XRT", "零售", "equity", { category: "consumer_discretionary" }),
+      member("XHB", "房屋建築", "equity", { category: "consumer_discretionary" }),
+      member("XOP", "油氣勘探與生產", "equity", { category: "energy" }),
+      member("XES", "油氣設備與服務", "equity", { category: "energy" }),
+      member("KRE", "地區銀行", "equity", { category: "financials" }),
+      member("KIE", "保險", "equity", { category: "financials" }),
+      member("KCE", "資本市場", "equity", { category: "financials" }),
+      member("XBI", "生物科技", "equity", { category: "health_care" }),
+      member("XPH", "製藥", "equity", { category: "health_care" }),
+      member("XHE", "醫療設備", "equity", { category: "health_care" }),
+      member("XHS", "醫療服務", "equity", { category: "health_care" }),
+      member("XAR", "航空航天與國防", "equity", { category: "industrials" }),
+      member("XTN", "運輸", "equity", { category: "industrials" }),
+      member("XME", "金屬與採礦", "equity", { category: "materials" }),
+      member("RWR", "美國 REIT", "equity", { category: "real_estate" }),
     ],
   },
   {
@@ -123,6 +169,8 @@ const buildHorizon = (universe, universeIndex, horizon, dates) => {
       symbol: item.symbol,
       label_zh_hant: item.label_zh_hant,
       asset_class: item.asset_class,
+      ...(item.category ? { category: item.category } : {}),
+      ...(item.drilldown_target ? { drilldown_target: item.drilldown_target } : {}),
       x,
       y,
       quadrant: quadrantFor({ x, y }),
@@ -140,7 +188,7 @@ export const buildSyntheticSnapshot = () => {
   const dates = buildTradingDates();
   return {
     schema_version: "rotation-snapshot-v1",
-    snapshot_id: "srm-synthetic-design-demo-v2",
+    snapshot_id: "srm-synthetic-design-demo-v4",
     publication_state: "valid",
     as_of_market_date: "SYNTHETIC · NOT LIVE",
     provider: {
@@ -158,6 +206,8 @@ export const buildSyntheticSnapshot = () => {
         title_zh_hant: universe.title_zh_hant,
         benchmark: universe.benchmark,
         member_count: universe.members.length,
+        ...(universe.categories ? { categories: universe.categories } : {}),
+        ...(universe.drilldown_universe_id ? { drilldown_universe_id: universe.drilldown_universe_id } : {}),
         asset_classes: classIds.map((id) => ({
           id,
           ...assetClassDefinitions[id],

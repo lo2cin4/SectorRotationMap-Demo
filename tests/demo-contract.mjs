@@ -39,17 +39,27 @@ test("synthetic snapshot exposes the complete UI contract without market data", 
   assert.deepEqual(snapshot.universes.map(({ id }) => id), [
     "global_assets",
     "us_sectors",
+    "us_industries",
     "global_markets",
   ]);
-  assert.deepEqual(snapshot.universes.map(({ member_count }) => member_count), [21, 11, 8]);
+  assert.deepEqual(snapshot.universes.map(({ member_count }) => member_count), [21, 11, 20, 8]);
   assert.deepEqual(walkKeys(snapshot), []);
 
-  const [globalAssets, usSectors, globalMarkets] = snapshot.universes;
+  const [globalAssets, usSectors, usIndustries, globalMarkets] = snapshot.universes;
   assert.deepEqual(
     Object.fromEntries(globalAssets.asset_classes.map(({ id, member_count }) => [id, member_count])),
     { equity: 11, bond: 4, commodity: 6 },
   );
   assert.deepEqual(usSectors.asset_classes.map(({ id }) => id), ["equity"]);
+  assert.equal(usSectors.drilldown_universe_id, "us_industries");
+  assert.equal(usIndustries.categories.length, 9);
+  assert.deepEqual(
+    usIndustries.horizons["60"].points
+      .filter(({ category }) => category === "technology")
+      .map(({ symbol }) => symbol)
+      .sort(),
+    ["IGM", "IHAK", "SOXX", "XSW"],
+  );
   assert.deepEqual(globalMarkets.asset_classes.map(({ id }) => id), ["equity"]);
 
   snapshot.universes.forEach((universe) => {
@@ -102,6 +112,9 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(dashboardJs, /Math\.round\(playbackBaseIntervalMs \/ speed\)/);
   assert.doesNotMatch(dashboardJs, /Math\.round\(800 \/ speed\)/);
   assert.match(html, /data-srm-legend/);
+  assert.match(html, /data-srm-drilldown/);
+  assert.match(html, /data-srm-category-filters/);
+  assert.match(html, /data-srm-drilldown-back/);
   assert.match(html, /data-srm-chart/);
   assert.match(html, /data-srm-method/);
   assert.match(html, /查看相對強弱計算公式/);
@@ -115,6 +128,10 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(dashboardCss, /--srm-brand-gold:/);
   assert.match(dashboardCss, /\.srm-workbench/);
   assert.match(dashboardCss, /\.srm-chart-head/);
+  assert.match(dashboardCss, /\.srm-light-segment/);
+  assert.match(dashboardCss, /\.srm-drilldown/);
+  assert.match(dashboardJs, /class: "srm-light-segment"/);
+  assert.doesNotMatch(dashboardJs, /class: "srm-trail"/);
   assert.match(dashboardCss, /font-family: var\(--srm-brand-serif\)/);
   assert.match(demoCss, /lo2cin4/);
   assert.doesNotMatch(html, /snapshots\/latest\.json|sector_rotation\.sqlite3|yfinance/i);
