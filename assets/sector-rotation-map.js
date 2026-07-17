@@ -108,12 +108,45 @@
     };
   };
 
+  const footstepCount = 5;
+
+  const updateFootstepTail = (tail, trail) => {
+    const history = trail.slice(0, -1);
+    const signature = history.map((position) => position[0]).join("|");
+    if (tail.dataset.srmTrailSignature === signature) return;
+    tail.dataset.srmTrailSignature = signature;
+    const footsteps = [...tail.querySelectorAll(".srm-footstep")];
+    footsteps.forEach((footstep, index) => {
+      if (history.length === 0) {
+        if (footstep.getAttribute("visibility") !== "hidden") footstep.setAttribute("visibility", "hidden");
+        return;
+      }
+      const progress = footstepCount === 1 ? 1 : index / (footstepCount - 1);
+      const historyIndex = Math.round(progress * (history.length - 1));
+      const position = history[historyIndex];
+      const previous = history[Math.max(0, historyIndex - 1)] || position;
+      const next = historyIndex + 1 < history.length ? history[historyIndex + 1] : position;
+      const directionStart = historyIndex + 1 < history.length ? position : previous;
+      const x = scaleX(position[1]);
+      const y = scaleY(position[2]);
+      const nextX = scaleX(next[1]);
+      const nextY = scaleY(next[2]);
+      const directionX = scaleX(directionStart[1]);
+      const directionY = scaleY(directionStart[2]);
+      const angle = Math.atan2(nextY - directionY, nextX - directionX) * (180 / Math.PI);
+      const side = index % 2 === 0 ? 1 : -1;
+      const transform = `translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${angle.toFixed(1)}) scale(1 ${side})`;
+      if (footstep.getAttribute("transform") !== transform) footstep.setAttribute("transform", transform);
+      if (footstep.getAttribute("visibility") !== "visible") footstep.setAttribute("visibility", "visible");
+    });
+  };
+
   const drawPoints = (root, svg, points, onDrilldown) => {
     const tooltip = root.querySelector("[data-srm-tooltip]");
     const trailsLayer = svg.querySelector("[data-srm-trails-layer]");
     const pointsLayer = svg.querySelector("[data-srm-points-layer]");
     const existingTrails = new Map(
-      [...trailsLayer.querySelectorAll(".srm-energy-rail")]
+      [...trailsLayer.querySelectorAll(".srm-footstep-tail")]
         .map((node) => [node.dataset.srmSymbol, node]),
     );
     const existingPoints = new Map(
@@ -128,22 +161,26 @@
       const color = colorFor(point);
       const trail = Array.isArray(point.trail) ? point.trail : [];
       if (trail.length > 1) {
-        let energyRail = existingTrails.get(point.symbol);
-        if (!energyRail) {
-          energyRail = svgNode("path", {
-            class: "srm-energy-rail",
+        let footstepTail = existingTrails.get(point.symbol);
+        if (!footstepTail) {
+          footstepTail = svgNode("g", {
+            class: "srm-footstep-tail",
             "data-srm-symbol": point.symbol,
-            fill: "none",
-            pathLength: "1",
+            "aria-hidden": "true",
           });
-          energyRail.style.setProperty("--srm-token-color", color);
-          energyRail.setAttribute("data-srm-category", point.category || point.asset_class || "quadrant");
-          trailsLayer.appendChild(energyRail);
+          footstepTail.style.setProperty("--srm-token-color", color);
+          footstepTail.setAttribute("data-srm-category", point.category || point.asset_class || "quadrant");
+          for (let footstepIndex = 0; footstepIndex < footstepCount; footstepIndex += 1) {
+            const footstep = svgNode("g", { class: "srm-footstep", visibility: "hidden" });
+            footstep.append(
+              svgNode("ellipse", { cx: -0.6, cy: 0, rx: 2.9, ry: 1.45, class: "srm-footstep-sole" }),
+              svgNode("circle", { cx: 2.55, cy: -0.82, r: 1.05, class: "srm-footstep-toe" }),
+            );
+            footstepTail.appendChild(footstep);
+          }
+          trailsLayer.appendChild(footstepTail);
         }
-        const railPath = trail.slice(-4)
-          .map((position, railIndex) => `${railIndex === 0 ? "M" : "L"} ${scaleX(position[1]).toFixed(2)} ${scaleY(position[2]).toFixed(2)}`)
-          .join(" ");
-        if (energyRail.getAttribute("d") !== railPath) energyRail.setAttribute("d", railPath);
+        updateFootstepTail(footstepTail, trail);
       } else {
         existingTrails.get(point.symbol)?.remove();
       }
@@ -321,11 +358,13 @@
       const current = item.positions[frameIndex];
       if (!Array.isArray(current)) return [];
       const [x, y] = current;
-      const start = Math.max(0, frameIndex - 11);
+      const start = Math.max(0, frameIndex - 55);
       const trail = item.positions
         .slice(start, frameIndex + 1)
         .flatMap((position, offset) => (
-          Array.isArray(position) ? [[dates[start + offset], position[0], position[1]]] : []
+          Array.isArray(position) && ((start + offset) % 5 === 0 || start + offset === frameIndex)
+            ? [[dates[start + offset], position[0], position[1]]]
+            : []
         ));
       return [{
         ...base,
@@ -388,7 +427,7 @@
       const timelineInput = root.querySelector("[data-srm-timeline]");
       const playButton = root.querySelector("[data-srm-play]");
       const speedSelect = root.querySelector("[data-srm-speed]");
-      const playbackBaseIntervalMs = 200;
+      const playbackBaseIntervalMs = 100;
       let horizon = "60";
       let selectedDate = null;
       let playbackTimer = null;
@@ -399,7 +438,7 @@
       const syncMotionDuration = () => {
         const speed = Number(speedSelect?.value || 1);
         const frameInterval = Math.round(playbackBaseIntervalMs / speed);
-        const duration = Math.max(80, Math.round(frameInterval * 0.9));
+        const duration = Math.max(40, Math.round(frameInterval * 0.9));
         chart.style.setProperty("--srm-frame-duration", `${duration}ms`);
       };
 

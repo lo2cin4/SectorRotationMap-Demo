@@ -3,6 +3,8 @@ const { chromium } = require("playwright");
 
 const baseUrl = process.env.SRM_DEMO_URL || "http://127.0.0.1:4173/";
 const edge = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+const playbackSpeed = Number(process.env.SRM_PLAYBACK_SPEED || 1);
+const frameRanges = { 0.5: [14, 18], 1: [30, 34], 2: [45, 66] };
 
 (async () => {
   const browser = await chromium.launch({ executablePath: edge, headless: true });
@@ -14,6 +16,7 @@ const edge = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
     await page.locator('[data-srm-rendered="global_assets:60"]').waitFor();
     await page.locator("[data-srm-timeline]").fill("200");
     await page.locator("[data-srm-timeline]").dispatchEvent("input");
+    await page.locator("[data-srm-speed]").selectOption(String(playbackSpeed));
     const before = Object.fromEntries((await client.send("Performance.getMetrics")).metrics.map(({ name, value }) => [name, value]));
     const result = await page.evaluate(async () => {
       const root = document.querySelector("[data-srm-root]");
@@ -39,20 +42,23 @@ const edge = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
         advancedFrames: Number(timeline.value) - start,
         mutations,
         longTasks,
-        energyRails: document.querySelectorAll(".srm-energy-rail").length,
+        footstepTails: document.querySelectorAll(".srm-footstep-tail").length,
+        footsteps: document.querySelectorAll(".srm-footstep").length,
       };
     });
     const after = Object.fromEntries((await client.send("Performance.getMetrics")).metrics.map(({ name, value }) => [name, value]));
     result.taskDurationMs = ((after.TaskDuration || 0) - (before.TaskDuration || 0)) * 1000;
     result.recalcStyleDurationMs = ((after.RecalcStyleDuration || 0) - (before.RecalcStyleDuration || 0)) * 1000;
-    assert.ok(result.advancedFrames >= 15 && result.advancedFrames <= 17, JSON.stringify(result));
-    assert.equal(result.energyRails, 21);
-    assert.ok(result.mutations.attributes <= 5000, JSON.stringify(result));
+    const [minimumFrames, maximumFrames] = frameRanges[playbackSpeed] || frameRanges[1];
+    assert.ok(result.advancedFrames >= minimumFrames && result.advancedFrames <= maximumFrames, JSON.stringify(result));
+    assert.equal(result.footstepTails, 21);
+    assert.equal(result.footsteps, 105);
+    assert.ok(result.mutations.attributes <= 3000 * Math.max(1, playbackSpeed), JSON.stringify(result));
     assert.ok(result.mutations.childList <= 200, JSON.stringify(result));
-    assert.ok(result.taskDurationMs <= 700, JSON.stringify(result));
-    assert.ok(result.recalcStyleDurationMs <= 120, JSON.stringify(result));
+    assert.ok(result.taskDurationMs <= 1800 * Math.max(1, playbackSpeed), JSON.stringify(result));
+    assert.ok(result.recalcStyleDurationMs <= 220 * Math.max(1, playbackSpeed), JSON.stringify(result));
     assert.equal(result.longTasks.filter((duration) => duration > 50).length, 0, JSON.stringify(result));
-    console.log(JSON.stringify({ status: "pass", ...result }));
+    console.log(JSON.stringify({ status: "pass", playbackSpeed, ...result }));
   } finally {
     await browser.close();
   }

@@ -26,7 +26,8 @@ const artifacts = path.join(__dirname, "artifacts");
     await page.goto(baseUrl, { waitUntil: "networkidle" });
     await page.locator('[data-srm-rendered="global_assets:60"]').waitFor();
     assert.equal(await page.locator(".srm-point").count(), 21);
-    assert.equal(await page.locator(".srm-energy-rail").count(), 21);
+    assert.equal(await page.locator(".srm-footstep-tail").count(), 21);
+    assert.equal(await page.locator(".srm-footstep").count(), 105);
     assert.equal(await page.locator(".srm-token-column").count(), 21);
     assert.equal(await page.locator(".srm-platform").count(), 4);
     assert.equal(await page.locator(".srm-legend-item").count(), 3);
@@ -80,7 +81,7 @@ const artifacts = path.join(__dirname, "artifacts");
     }, symbol);
     await page.evaluate((symbol) => {
       window.__srmStablePlaybackPoint = document.querySelector(`.srm-point[data-srm-symbol="${symbol}"]`);
-      window.__srmStableEnergyRail = document.querySelector(`.srm-energy-rail[data-srm-symbol="${symbol}"]`);
+      window.__srmStableFootstepTail = document.querySelector(`.srm-footstep-tail[data-srm-symbol="${symbol}"]`);
     }, motionSymbol);
     const startCenter = await centerOf(motionSymbol);
     await page.locator("[data-srm-timeline]").fill("251");
@@ -89,20 +90,20 @@ const artifacts = path.join(__dirname, "artifacts");
       const style = getComputedStyle(point);
       return {
         sameNode: point === window.__srmStablePlaybackPoint,
-        sameEnergyRail: document.querySelector(`.srm-energy-rail[data-srm-symbol="${symbol}"]`) === window.__srmStableEnergyRail,
+        sameFootstepTail: document.querySelector(`.srm-footstep-tail[data-srm-symbol="${symbol}"]`) === window.__srmStableFootstepTail,
         opacity: Number(style.opacity),
         transitionDuration: style.transitionDuration,
         transitionProperty: style.transitionProperty,
       };
     }, motionSymbol);
     assert.equal(smoothFrame.sameNode, true);
-    assert.equal(smoothFrame.sameEnergyRail, true);
+    assert.equal(smoothFrame.sameFootstepTail, true);
     assert.equal(smoothFrame.opacity, 1);
-    assert.equal(smoothFrame.transitionDuration, "0.18s");
+    assert.equal(smoothFrame.transitionDuration, "0.09s");
     assert.match(smoothFrame.transitionProperty, /transform/);
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(45);
     const middleCenter = await centerOf(motionSymbol);
-    await page.waitForTimeout(110);
+    await page.waitForTimeout(60);
     const endCenter = await centerOf(motionSymbol);
     const distance = (left, right) => Math.hypot(left.x - right.x, left.y - right.y);
     assert.ok(distance(startCenter, endCenter) > 0.1);
@@ -113,7 +114,7 @@ const artifacts = path.join(__dirname, "artifacts");
       await page.locator("[data-srm-speed] option").evaluateAll((options) => options.map((option) => option.value)),
       ["0.5", "1", "2"],
     );
-    for (const [speed, duration] of [["0.5", "0.36s"], ["1", "0.18s"], ["2", "0.09s"]]) {
+    for (const [speed, duration] of [["0.5", "0.18s"], ["1", "0.09s"], ["2", "0.045s"]]) {
       await page.locator("[data-srm-speed]").selectOption(speed);
       assert.equal(await page.locator("[data-srm-speed]").inputValue(), speed);
       assert.equal(
@@ -197,7 +198,7 @@ const artifacts = path.join(__dirname, "artifacts");
     console.log(JSON.stringify({
       status: "pass",
       url: baseUrl,
-      interactions: ["method:hover-focus-click", "timeline:2019-scrub", "timeline:smooth-node-continuity", "timeline:raf-play-pause", "speed:0.5x-2x", "universe:us_sectors", "drilldown:pointer-keyboard", "industry-filter:technology-all", "visual:isometric-platforms-energy-rails", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
+      interactions: ["method:hover-focus-click", "timeline:2019-scrub", "timeline:smooth-node-continuity", "timeline:raf-play-pause", "speed:0.5x-2x", "universe:us_sectors", "drilldown:pointer-keyboard", "industry-filter:technology-all", "visual:isometric-platforms-footstep-tails", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
       screenshots: ["sector-rotation-editorial-desktop.png", "sector-rotation-global-desktop.png", "sector-rotation-industry-technology.png", "sector-rotation-desktop.png", "sector-rotation-editorial-mobile.png", "sector-rotation-industry-mobile.png", "sector-rotation-mobile.png"],
       console_errors: errors,
     }));

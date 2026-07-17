@@ -7,9 +7,9 @@ market data, trading research, or investment advice.
 The preview includes four universes (21 global cross-asset members, 11 U.S.
 sectors, 20 curated U.S. industry ETF proxies, and 8 global markets),
 sector-to-industry drill-down, parent-sector colours, isometric floating
-platforms, crystal tokens, and a synthetic timeline from 2019-01-02 with scrub, play/pause, and
+platforms, crystal tokens, five-step breadcrumb tails, and a synthetic timeline from 2019-01-02 with scrub, play/pause, and
 0.5×/1×/2× playback. The default 1× cadence advances one trading session every
-200ms.
+100ms.
 
 The private data engine, SQLite state, production snapshots, provider adapter,
 and WordPress intake endpoint are intentionally excluded from this repository.

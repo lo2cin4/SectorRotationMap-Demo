@@ -111,7 +111,7 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(html, /<option value="1" selected>1×<\/option>/);
   assert.match(html, /<option value="2">2×<\/option>/);
   assert.doesNotMatch(html, /<option value="4">4×<\/option>/);
-  assert.match(dashboardJs, /const playbackBaseIntervalMs = 200;/);
+  assert.match(dashboardJs, /const playbackBaseIntervalMs = 100;/);
   assert.match(dashboardJs, /requestAnimationFrame/);
   assert.doesNotMatch(dashboardJs, /setInterval/);
   assert.doesNotMatch(dashboardJs, /Math\.round\(800 \/ speed\)/);
@@ -134,9 +134,14 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(dashboardCss, /\.srm-chart-head/);
   assert.match(dashboardCss, /\.srm-platform--leading/);
   assert.match(dashboardCss, /\.srm-token-column/);
-  assert.match(dashboardCss, /\.srm-energy-rail/);
+  assert.match(dashboardCss, /\.srm-footstep-tail/);
+  assert.match(dashboardCss, /\.srm-footstep-sole/);
   assert.match(dashboardCss, /\.srm-drilldown/);
-  assert.match(dashboardJs, /class: "srm-energy-rail"/);
+  assert.match(dashboardJs, /class: "srm-footstep-tail"/);
+  assert.match(dashboardJs, /class: "srm-footstep"/);
+  assert.match(dashboardJs, /const footstepCount = 5;/);
+  assert.doesNotMatch(dashboardJs, /srm-energy-rail/);
+  assert.doesNotMatch(dashboardCss, /srm-energy-rail/);
   assert.match(dashboardJs, /class: "srm-token-column"/);
   assert.doesNotMatch(dashboardJs, /class: "srm-light-segment"/);
   assert.doesNotMatch(dashboardJs, /feGaussianBlur/);

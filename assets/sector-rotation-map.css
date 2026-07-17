@@ -616,16 +616,23 @@
 .srm-quadrant-index--weakening { fill: #eeb84a; }
 .srm-quadrant-index--lagging { fill: #a98dff; }
 
-.srm-energy-rail {
-  fill: none;
-  stroke: var(--srm-token-color, #d8b169);
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 0.72 0.06;
-  opacity: 0.58;
+.srm-footstep-tail {
   pointer-events: none;
 }
+
+.srm-footstep {
+  fill: var(--srm-token-color, #d8b169);
+  stroke: rgba(255, 255, 255, 0.52);
+  stroke-width: 0.45;
+}
+
+.srm-footstep:nth-child(1) { opacity: 0.16; }
+.srm-footstep:nth-child(2) { opacity: 0.25; }
+.srm-footstep:nth-child(3) { opacity: 0.36; }
+.srm-footstep:nth-child(4) { opacity: 0.49; }
+.srm-footstep:nth-child(5) { opacity: 0.66; }
+.srm-footstep-sole { fill: var(--srm-token-color, #d8b169); }
+.srm-footstep-toe { fill: #fff; stroke: var(--srm-token-color, #d8b169); stroke-width: 0.65; }
 
 .srm-point {
   opacity: 1;
