@@ -371,12 +371,17 @@
   filter: url(#srm-glow);
   animation: srm-trace 0.8s ease-out both;
   animation-delay: var(--delay);
+  transition: d var(--srm-frame-duration, 600ms) linear;
 }
 
 .srm-point {
-  opacity: 0;
+  opacity: 1;
   cursor: default;
-  animation: srm-arrive 0.42s ease-out forwards;
+  transition: transform var(--srm-frame-duration, 600ms) linear;
+}
+
+.srm-point--entering {
+  animation: srm-arrive 0.32s ease-out both;
   animation-delay: var(--delay);
 }
 
@@ -441,8 +446,8 @@
 }
 
 @keyframes srm-arrive {
-  from { opacity: 0; transform: translateY(7px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes srm-trace {
@@ -466,6 +471,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .srm-trail { animation: none; opacity: 0.62; }
-  .srm-point { animation: none; opacity: 1; }
+  .srm-trail { animation: none; opacity: 0.62; transition: none; }
+  .srm-point { animation: none; opacity: 1; transition: none; }
 }

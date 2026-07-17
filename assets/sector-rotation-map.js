@@ -90,6 +90,8 @@
     addText(svg, "相對趨勢強弱 →", 510, 650, "srm-axis-label", "middle");
     const yLabel = addText(svg, "相對動能 →", 20, 320, "srm-axis-label", "middle");
     yLabel.setAttribute("transform", "rotate(-90 20 320)");
+    svg.appendChild(svgNode("g", { class: "srm-trails-layer", "data-srm-trails-layer": "" }));
+    svg.appendChild(svgNode("g", { class: "srm-points-layer", "data-srm-points-layer": "" }));
   };
 
   const labelOffset = (point, index) => {
@@ -104,8 +106,20 @@
 
   const drawPoints = (root, svg, points) => {
     const tooltip = root.querySelector("[data-srm-tooltip]");
+    const trailsLayer = svg.querySelector("[data-srm-trails-layer]");
+    const pointsLayer = svg.querySelector("[data-srm-points-layer]");
+    const existingTrails = new Map(
+      [...trailsLayer.querySelectorAll(".srm-trail")]
+        .map((node) => [node.dataset.srmSymbol, node]),
+    );
+    const existingPoints = new Map(
+      [...pointsLayer.querySelectorAll(".srm-point")]
+        .map((node) => [node.dataset.srmSymbol, node]),
+    );
+    const activeSymbols = new Set();
     const ordered = [...points].sort((a, b) => a.symbol.localeCompare(b.symbol));
     ordered.forEach((point, index) => {
+      activeSymbols.add(point.symbol);
       const quadrant = point.quadrant || quadrantFor(point);
       const color = colorFor(point);
       const trail = Array.isArray(point.trail) ? point.trail : [];
@@ -113,14 +127,21 @@
         const pathData = trail
           .map((item, trailIndex) => `${trailIndex === 0 ? "M" : "L"} ${scaleX(item[1]).toFixed(2)} ${scaleY(item[2]).toFixed(2)}`)
           .join(" ");
-        svg.appendChild(svgNode("path", {
-          d: pathData,
-          class: "srm-trail",
-          stroke: color,
-          pathLength: "1",
-          "data-srm-asset-class": point.asset_class || "quadrant",
-          style: `--delay:${index * 28}ms`,
-        }));
+        let path = existingTrails.get(point.symbol);
+        if (!path) {
+          path = svgNode("path", {
+            class: "srm-trail",
+            pathLength: "1",
+            "data-srm-symbol": point.symbol,
+          });
+          trailsLayer.appendChild(path);
+        }
+        path.setAttribute("d", pathData);
+        path.setAttribute("stroke", color);
+        path.setAttribute("data-srm-asset-class", point.asset_class || "quadrant");
+        path.style.setProperty("--delay", `${index * 28}ms`);
+      } else {
+        existingTrails.get(point.symbol)?.remove();
       }
 
       const x = scaleX(point.x);
@@ -128,41 +149,51 @@
       const label = labelOffset(point, index);
       const classLabel = assetClassPalette[point.asset_class]?.label || "未分類";
       const aria = `${point.label_zh_hant}，${classLabel}，${quadrantLabels[quadrant]}，相對趨勢 ${number.format(point.x)}，相對動能 ${number.format(point.y)}`;
-      const group = svgNode("g", {
-        class: "srm-point",
-        style: `--delay:${index * 28}ms`,
-        tabindex: "0",
-        role: "img",
-        "aria-label": aria,
-        "data-srm-asset-class": point.asset_class || "quadrant",
-      });
-      const halo = svgNode("circle", { cx: x, cy: y, r: 12, fill: color, class: "srm-point-halo" });
-      const dot = svgNode("circle", { cx: x, cy: y, r: 5.2, fill: color, class: "srm-point-dot" });
-      const title = svgNode("title");
-      title.textContent = aria;
-      dot.appendChild(title);
-      group.append(halo, dot);
-      const text = svgNode("text", {
-        x: x + label.x,
-        y: y + label.y,
-        class: "srm-point-label",
-        fill: color,
-        "text-anchor": label.anchor,
-      });
-      text.textContent = point.label_zh_hant;
-      group.appendChild(text);
+      let group = existingPoints.get(point.symbol);
+      if (!group) {
+        group = svgNode("g", {
+          class: "srm-point srm-point--entering",
+          tabindex: "0",
+          role: "img",
+          "data-srm-symbol": point.symbol,
+        });
+        const halo = svgNode("circle", { cx: 0, cy: 0, r: 12, class: "srm-point-halo" });
+        const dot = svgNode("circle", { cx: 0, cy: 0, r: 5.2, class: "srm-point-dot" });
+        dot.appendChild(svgNode("title"));
+        group.append(halo, dot, svgNode("text", { x: 0, y: 0, class: "srm-point-label" }));
+        pointsLayer.appendChild(group);
+      }
 
-      if (tooltip) {
+      group.__srmState = { point, quadrant, classLabel, x, y };
+      group.setAttribute("transform", `translate(${x.toFixed(2)} ${y.toFixed(2)})`);
+      group.setAttribute("aria-label", aria);
+      group.setAttribute("data-srm-asset-class", point.asset_class || "quadrant");
+      group.style.setProperty("--delay", `${index * 28}ms`);
+      const halo = group.querySelector(".srm-point-halo");
+      const dot = group.querySelector(".srm-point-dot");
+      const title = dot.querySelector("title");
+      const text = group.querySelector(".srm-point-label");
+      halo.setAttribute("fill", color);
+      dot.setAttribute("fill", color);
+      title.textContent = aria;
+      text.setAttribute("x", label.x);
+      text.setAttribute("y", label.y);
+      text.setAttribute("fill", color);
+      text.setAttribute("text-anchor", label.anchor);
+      text.textContent = point.label_zh_hant;
+
+      if (tooltip && !group.dataset.srmTooltipReady) {
         const showTooltip = () => {
+          const state = group.__srmState;
           tooltip.hidden = false;
-          tooltip.style.left = `${Math.min(92, Math.max(8, (x / 1000) * 100))}%`;
-          tooltip.style.top = `${Math.min(88, Math.max(10, (y / 660) * 100))}%`;
+          tooltip.style.left = `${Math.min(92, Math.max(8, (state.x / 1000) * 100))}%`;
+          tooltip.style.top = `${Math.min(88, Math.max(10, (state.y / 660) * 100))}%`;
           const heading = document.createElement("strong");
           const identity = document.createElement("span");
           const values = document.createElement("span");
-          heading.textContent = point.label_zh_hant;
-          identity.textContent = `${point.symbol} · ${classLabel} · ${quadrantLabels[quadrant]}`;
-          values.textContent = `趨勢 ${number.format(point.x)} ／ 動能 ${number.format(point.y)}`;
+          heading.textContent = state.point.label_zh_hant;
+          identity.textContent = `${state.point.symbol} · ${state.classLabel} · ${quadrantLabels[state.quadrant]}`;
+          values.textContent = `趨勢 ${number.format(state.point.x)} ／ 動能 ${number.format(state.point.y)}`;
           tooltip.replaceChildren(heading, identity, values);
         };
         const hideTooltip = () => { tooltip.hidden = true; };
@@ -170,8 +201,15 @@
         group.addEventListener("pointerleave", hideTooltip);
         group.addEventListener("focus", showTooltip);
         group.addEventListener("blur", hideTooltip);
+        group.dataset.srmTooltipReady = "true";
       }
-      svg.appendChild(group);
+    });
+
+    existingTrails.forEach((node, symbol) => {
+      if (!activeSymbols.has(symbol)) node.remove();
+    });
+    existingPoints.forEach((node, symbol) => {
+      if (!activeSymbols.has(symbol)) node.remove();
     });
   };
 
@@ -258,6 +296,12 @@
       let selectedDate = null;
       let playbackTimer = null;
 
+      const syncMotionDuration = () => {
+        const speed = Number(speedSelect?.value || 1);
+        const duration = Math.min(650, Math.max(140, Math.round(600 / speed)));
+        chart.style.setProperty("--srm-frame-duration", `${duration}ms`);
+      };
+
       snapshot.universes.forEach((universe) => {
         const option = document.createElement("option");
         option.value = universe.id;
@@ -311,7 +355,10 @@
         const points = frameIndex >= 0 ? pointsAt(horizonPayload, frameIndex) : horizonPayload.points;
         const trendLeader = [...points].sort((a, b) => b.x - a.x)[0];
         const leadingCount = points.filter((point) => (point.quadrant || quadrantFor(point)) === "leading").length;
-        drawBase(chart);
+        if (!chart.dataset.srmBaseReady) {
+          drawBase(chart);
+          chart.dataset.srmBaseReady = "true";
+        }
         drawPoints(root, chart, points);
         drawLegend(root, universe, points);
         syncTimeline(horizonPayload, frameIndex);
@@ -334,6 +381,7 @@
           render();
         }
         const speed = Number(speedSelect?.value || 1);
+        syncMotionDuration();
         playButton.textContent = "❚❚ 暫停";
         playButton.setAttribute("aria-pressed", "true");
         playbackTimer = window.setInterval(() => {
@@ -377,10 +425,12 @@
         else stopPlayback();
       });
       speedSelect?.addEventListener("change", () => {
+        syncMotionDuration();
         if (playbackTimer === null) return;
         stopPlayback();
         startPlayback();
       });
+      syncMotionDuration();
       render();
     } catch (error) {
       root.classList.add("srm-shell--error");

@@ -16,7 +16,7 @@ const artifacts = path.join(__dirname, "artifacts");
     const desktopContext = await browser.newContext({
       viewport: { width: 1440, height: 1100 },
       deviceScaleFactor: 1,
-      reducedMotion: "reduce",
+      reducedMotion: "no-preference",
     });
     const page = await desktopContext.newPage();
     page.on("console", (message) => {
@@ -35,6 +35,49 @@ const artifacts = path.join(__dirname, "artifacts");
     await page.locator("[data-srm-timeline]").fill("250");
     assert.equal(await page.locator("[data-srm-timeline]").getAttribute("value"), "250");
     assert.notEqual(await page.locator("[data-srm-date]").innerText(), "2026-07-17");
+    await page.waitForTimeout(900);
+    const motionSymbol = await page.evaluate(() => {
+      const snapshot = JSON.parse(document.querySelector("[data-srm-snapshot]").textContent);
+      const timeline = snapshot.universes.find((item) => item.id === "global_assets").horizons["60"].timeline;
+      return timeline.series
+        .map((series) => ({
+          symbol: series.symbol,
+          distance: Math.hypot(
+            series.positions[251][0] - series.positions[250][0],
+            series.positions[251][1] - series.positions[250][1],
+          ),
+        }))
+        .sort((left, right) => right.distance - left.distance)[0].symbol;
+    });
+    const centerOf = (symbol) => page.evaluate((targetSymbol) => {
+      const box = document.querySelector(`.srm-point[data-srm-symbol="${targetSymbol}"]`).getBoundingClientRect();
+      return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    }, symbol);
+    await page.evaluate((symbol) => {
+      window.__srmStablePlaybackPoint = document.querySelector(`.srm-point[data-srm-symbol="${symbol}"]`);
+    }, motionSymbol);
+    const startCenter = await centerOf(motionSymbol);
+    await page.locator("[data-srm-timeline]").fill("251");
+    const smoothFrame = await page.evaluate((symbol) => {
+      const point = document.querySelector(`.srm-point[data-srm-symbol="${symbol}"]`);
+      const style = getComputedStyle(point);
+      return {
+        sameNode: point === window.__srmStablePlaybackPoint,
+        opacity: Number(style.opacity),
+        transitionProperty: style.transitionProperty,
+      };
+    }, motionSymbol);
+    assert.equal(smoothFrame.sameNode, true);
+    assert.equal(smoothFrame.opacity, 1);
+    assert.match(smoothFrame.transitionProperty, /transform/);
+    await page.waitForTimeout(100);
+    const middleCenter = await centerOf(motionSymbol);
+    await page.waitForTimeout(650);
+    const endCenter = await centerOf(motionSymbol);
+    const distance = (left, right) => Math.hypot(left.x - right.x, left.y - right.y);
+    assert.ok(distance(startCenter, endCenter) > 0.1);
+    assert.ok(distance(startCenter, middleCenter) > 0.01);
+    assert.ok(distance(middleCenter, endCenter) > 0.01);
 
     await page.locator("[data-srm-speed]").selectOption("4");
     assert.equal(await page.locator("[data-srm-speed]").inputValue(), "4");
@@ -66,6 +109,11 @@ const artifacts = path.join(__dirname, "artifacts");
     mobile.on("pageerror", (error) => errors.push(error.message));
     await mobile.goto(baseUrl, { waitUntil: "networkidle" });
     await mobile.locator('[data-srm-rendered="global_assets:60"]').waitFor();
+    assert.equal(await mobile.locator(".srm-point").count(), 21);
+    assert.equal(
+      await mobile.locator(".srm-point").first().evaluate((node) => getComputedStyle(node).transitionDuration),
+      "0s",
+    );
     assert.equal(await mobile.locator(".srm-chart-wrap").evaluate((node) => node.scrollWidth > node.clientWidth), true);
     await mobile.screenshot({ path: path.join(artifacts, "sector-rotation-mobile.png"), fullPage: true });
 
@@ -73,7 +121,7 @@ const artifacts = path.join(__dirname, "artifacts");
     console.log(JSON.stringify({
       status: "pass",
       url: baseUrl,
-      interactions: ["timeline:scrub", "timeline:play-pause", "speed:4x", "universe:us_sectors", "horizon:120", "point:keyboard-tooltip"],
+      interactions: ["timeline:scrub", "timeline:smooth-node-continuity", "timeline:play-pause", "speed:4x", "universe:us_sectors", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
       screenshots: ["sector-rotation-global-desktop.png", "sector-rotation-desktop.png", "sector-rotation-mobile.png"],
       console_errors: errors,
     }));
