@@ -13,8 +13,10 @@
   <body>
     <main class="demo-page">
       <header class="demo-masthead">
-        <a class="demo-mark" href="./" aria-label="Sector Rotation Map 首頁">SR<span>/</span>MAP</a>
-        <p>MEMBER PRODUCT PREVIEW · v0.2</p>
+        <a class="demo-mark" href="./" aria-label="Sector Rotation Map 首頁">
+          <strong>lo2cin4</strong><span>/</span><em>SR MAP</em>
+        </a>
+        <p>MEMBER RESEARCH SYSTEM <span>04</span> · v0.3</p>
       </header>
 
       <aside class="demo-banner" role="note">
@@ -22,7 +24,7 @@
         <span>非真實市場數據，只用作介面與互動設計預覽。</span>
       </aside>
 
-      <section class="srm-shell" data-srm-root>
+      <section class="srm-shell" data-srm-root data-srm-design="lo2cin4-editorial-v2">
         <div class="srm-header">
           <div class="srm-header-copy">
             <p class="srm-eyebrow">LO2CIN4 MEMBER INTELLIGENCE</p>
@@ -74,13 +76,20 @@
               </aside>
             </details>
           </div>
-          <div class="srm-status">
-            <span class="srm-live-dot" aria-hidden="true"></span>
-            <span data-srm-as-of>載入中</span>
+          <div class="srm-header-meta">
+            <div class="srm-system-code" aria-hidden="true">
+              <span>RELATIVE TREND</span>
+              <strong>01—04</strong>
+            </div>
+            <div class="srm-status">
+              <span class="srm-live-dot" aria-hidden="true"></span>
+              <span data-srm-as-of>載入中</span>
+            </div>
           </div>
         </div>
 
-        <div class="srm-toolbar">
+        <section class="srm-workbench" aria-label="輪動圖控制台">
+          <div class="srm-toolbar">
           <label>
             <span>觀察範圍</span>
             <select data-srm-universe aria-label="觀察範圍"></select>
@@ -90,11 +99,11 @@
             <button type="button" class="is-active" data-srm-horizon="60">60日</button>
             <button type="button" data-srm-horizon="120">120日</button>
           </div>
-        </div>
+          </div>
 
-        <div class="srm-legend" data-srm-legend aria-label="資產類別圖例"></div>
+          <div class="srm-legend" data-srm-legend aria-label="資產類別圖例"></div>
 
-        <div class="srm-insights" aria-live="polite">
+          <div class="srm-insights" aria-live="polite">
           <div class="srm-insight">
             <span>相對趨勢最強</span>
             <strong data-srm-leader>—</strong>
@@ -107,9 +116,9 @@
             <span>觀察週期</span>
             <strong data-srm-horizon-label>60D</strong>
           </div>
-        </div>
+          </div>
 
-        <section class="srm-history" data-srm-history aria-label="歷史回看">
+          <section class="srm-history" data-srm-history aria-label="歷史回看">
           <div class="srm-history-head">
             <div>
               <span>歷史回看</span>
@@ -134,8 +143,16 @@
             <span data-srm-date-start>—</span>
             <span data-srm-date-end>—</span>
           </div>
+          </section>
         </section>
 
+        <div class="srm-chart-head">
+          <div>
+            <span>ROTATION FIELD · 100 BASELINE</span>
+            <strong>RELATIVE TREND MATRIX</strong>
+          </div>
+          <p><span>X · 相對趨勢</span><span>Y · 趨勢加速度</span></p>
+        </div>
         <p class="srm-scroll-hint">← 左右滑動查看完整象限 →</p>
         <div class="srm-chart-wrap">
           <svg data-srm-chart viewBox="0 0 1000 660" role="img" aria-label="產業輪動象限圖"></svg>

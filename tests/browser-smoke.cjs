@@ -30,6 +30,18 @@ const artifacts = path.join(__dirname, "artifacts");
     assert.match(await page.locator(".demo-banner").innerText(), /SYNTHETIC DEMO/);
     assert.equal(await page.locator("[data-srm-timeline]").getAttribute("max"), "519");
     assert.equal(await page.locator("[data-srm-date]").innerText(), "2026-07-17");
+    assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-design"), "lo2cin4-editorial-v2");
+    assert.equal(await page.locator(".srm-workbench").isVisible(), true);
+    assert.equal(await page.locator(".srm-chart-head").isVisible(), true);
+    const visualContract = await page.locator("[data-srm-root]").evaluate((root) => ({
+      shellRadius: getComputedStyle(root).borderRadius,
+      activeHorizon: getComputedStyle(root.querySelector("[data-srm-horizon].is-active")).backgroundColor,
+      titleFont: getComputedStyle(root.querySelector("h1, h2")).fontFamily,
+    }));
+    assert.equal(visualContract.shellRadius, "7px");
+    assert.equal(visualContract.activeHorizon, "rgb(216, 177, 105)");
+    assert.match(visualContract.titleFont, /Shippori Mincho|Noto Serif TC/);
+    await page.screenshot({ path: path.join(artifacts, "sector-rotation-editorial-desktop.png"), fullPage: true });
     const methodDisclosure = page.locator("[data-srm-method]");
     const methodTrigger = methodDisclosure.locator("summary");
     const methodPopover = methodDisclosure.locator(".srm-method-popover");
@@ -130,6 +142,8 @@ const artifacts = path.join(__dirname, "artifacts");
       await mobile.locator(".srm-point").first().evaluate((node) => getComputedStyle(node).transitionDuration),
       "0s",
     );
+    assert.equal(await mobile.locator("[data-srm-root]").getAttribute("data-srm-design"), "lo2cin4-editorial-v2");
+    await mobile.screenshot({ path: path.join(artifacts, "sector-rotation-editorial-mobile.png"), fullPage: true });
     await mobile.locator("[data-srm-method] summary").click();
     assert.equal(await mobile.locator("[data-srm-method]").getAttribute("open"), "");
     assert.equal(await mobile.locator(".srm-method-popover").isVisible(), true);
@@ -141,7 +155,7 @@ const artifacts = path.join(__dirname, "artifacts");
       status: "pass",
       url: baseUrl,
       interactions: ["method:hover-focus-click", "timeline:scrub", "timeline:smooth-node-continuity", "timeline:play-pause", "speed:4x", "universe:us_sectors", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
-      screenshots: ["sector-rotation-global-desktop.png", "sector-rotation-desktop.png", "sector-rotation-mobile.png"],
+      screenshots: ["sector-rotation-editorial-desktop.png", "sector-rotation-global-desktop.png", "sector-rotation-desktop.png", "sector-rotation-editorial-mobile.png", "sector-rotation-mobile.png"],
       console_errors: errors,
     }));
   } finally {

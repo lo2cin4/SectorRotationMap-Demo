@@ -80,6 +80,8 @@ test("synthetic snapshot exposes the complete UI contract without market data", 
 
 test("public page makes synthetic status and all controls explicit", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  const dashboardCss = await readFile(new URL("../assets/sector-rotation-map.css", import.meta.url), "utf8");
+  const demoCss = await readFile(new URL("../assets/demo.css", import.meta.url), "utf8");
 
   assert.match(html, /SYNTHETIC DEMO/);
   assert.match(html, /非真實市場數據/);
@@ -98,6 +100,15 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(html, /AdjClose/);
   assert.match(html, /RMS<sub>252<\/sub>/);
   assert.match(html, /並非 JdK RRG 或 XQ/);
+  assert.match(html, /data-srm-design="lo2cin4-editorial-v2"/);
+  assert.match(html, /class="srm-workbench"/);
+  assert.match(html, /class="srm-chart-head"/);
+  assert.match(html, /RELATIVE TREND MATRIX/);
+  assert.match(dashboardCss, /--srm-brand-gold:/);
+  assert.match(dashboardCss, /\.srm-workbench/);
+  assert.match(dashboardCss, /\.srm-chart-head/);
+  assert.match(dashboardCss, /font-family: var\(--srm-brand-serif\)/);
+  assert.match(demoCss, /lo2cin4/);
   assert.doesNotMatch(html, /snapshots\/latest\.json|sector_rotation\.sqlite3|yfinance/i);
 });
 
