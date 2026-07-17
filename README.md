@@ -9,7 +9,7 @@ sectors, 20 curated U.S. industry ETF proxies, and 8 global markets),
 sector-to-industry drill-down, parent-sector colours, isometric floating
 platforms, crystal tokens, five-step breadcrumb tails, and a synthetic timeline from 2019-01-02 with scrub, play/pause, and
 0.5×/1×/2× playback. The default 1× cadence advances one trading session every
-100ms.
+50ms.
 
 The private data engine, SQLite state, production snapshots, provider adapter,
 and WordPress intake endpoint are intentionally excluded from this repository.

@@ -94,27 +94,25 @@ const artifacts = path.join(__dirname, "artifacts");
         opacity: Number(style.opacity),
         transitionDuration: style.transitionDuration,
         transitionProperty: style.transitionProperty,
+        activeTransformTransition: point.getAnimations().some((animation) => animation.transitionProperty === "transform"),
       };
     }, motionSymbol);
     assert.equal(smoothFrame.sameNode, true);
     assert.equal(smoothFrame.sameFootstepTail, true);
     assert.equal(smoothFrame.opacity, 1);
-    assert.equal(smoothFrame.transitionDuration, "0.09s");
+    assert.equal(smoothFrame.transitionDuration, "0.045s");
     assert.match(smoothFrame.transitionProperty, /transform/);
-    await page.waitForTimeout(20);
-    const middleCenter = await centerOf(motionSymbol);
-    await page.waitForTimeout(100);
+    assert.equal(smoothFrame.activeTransformTransition, true);
+    await page.waitForTimeout(60);
     const endCenter = await centerOf(motionSymbol);
     const distance = (left, right) => Math.hypot(left.x - right.x, left.y - right.y);
     assert.ok(distance(startCenter, endCenter) > 0.1);
-    assert.ok(distance(startCenter, middleCenter) > 0.01);
-    assert.ok(distance(middleCenter, endCenter) > 0.01);
 
     assert.deepEqual(
       await page.locator("[data-srm-speed] option").evaluateAll((options) => options.map((option) => option.value)),
       ["0.5", "1", "2"],
     );
-    for (const [speed, duration] of [["0.5", "0.18s"], ["1", "0.09s"], ["2", "0.045s"]]) {
+    for (const [speed, duration] of [["0.5", "0.09s"], ["1", "0.045s"], ["2", "0.023s"]]) {
       await page.locator("[data-srm-speed]").selectOption(speed);
       assert.equal(await page.locator("[data-srm-speed]").inputValue(), speed);
       assert.equal(

@@ -427,7 +427,7 @@
       const timelineInput = root.querySelector("[data-srm-timeline]");
       const playButton = root.querySelector("[data-srm-play]");
       const speedSelect = root.querySelector("[data-srm-speed]");
-      const playbackBaseIntervalMs = 100;
+      const playbackBaseIntervalMs = 50;
       let horizon = "60";
       let selectedDate = null;
       let playbackTimer = null;
@@ -438,7 +438,7 @@
       const syncMotionDuration = () => {
         const speed = Number(speedSelect?.value || 1);
         const frameInterval = Math.round(playbackBaseIntervalMs / speed);
-        const duration = Math.max(40, Math.round(frameInterval * 0.9));
+        const duration = Math.max(20, Math.round(frameInterval * 0.9));
         chart.style.setProperty("--srm-frame-duration", `${duration}ms`);
       };
 

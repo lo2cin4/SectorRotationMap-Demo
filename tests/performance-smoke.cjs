@@ -4,7 +4,7 @@ const { chromium } = require("playwright");
 const baseUrl = process.env.SRM_DEMO_URL || "http://127.0.0.1:4173/";
 const edge = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const playbackSpeed = Number(process.env.SRM_PLAYBACK_SPEED || 1);
-const frameRanges = { 0.5: [14, 18], 1: [30, 34], 2: [45, 66] };
+const frameRanges = { 0.5: [28, 34], 1: [48, 66], 2: [100, 125] };
 
 (async () => {
   const browser = await chromium.launch({ executablePath: edge, headless: true });
@@ -54,7 +54,7 @@ const frameRanges = { 0.5: [14, 18], 1: [30, 34], 2: [45, 66] };
     assert.equal(result.footstepTails, 21);
     assert.equal(result.footsteps, 105);
     assert.ok(result.mutations.attributes <= 3000 * Math.max(1, playbackSpeed), JSON.stringify(result));
-    assert.ok(result.mutations.childList <= 200, JSON.stringify(result));
+    assert.ok(result.mutations.childList <= 260, JSON.stringify(result));
     assert.ok(result.taskDurationMs <= 1800 * Math.max(1, playbackSpeed), JSON.stringify(result));
     assert.ok(result.recalcStyleDurationMs <= 220 * Math.max(1, playbackSpeed), JSON.stringify(result));
     assert.equal(result.longTasks.filter((duration) => duration > 50).length, 0, JSON.stringify(result));

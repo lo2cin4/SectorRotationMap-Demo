@@ -111,7 +111,7 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(html, /<option value="1" selected>1×<\/option>/);
   assert.match(html, /<option value="2">2×<\/option>/);
   assert.doesNotMatch(html, /<option value="4">4×<\/option>/);
-  assert.match(dashboardJs, /const playbackBaseIntervalMs = 100;/);
+  assert.match(dashboardJs, /const playbackBaseIntervalMs = 50;/);
   assert.match(dashboardJs, /requestAnimationFrame/);
   assert.doesNotMatch(dashboardJs, /setInterval/);
   assert.doesNotMatch(dashboardJs, /Math\.round\(800 \/ speed\)/);
