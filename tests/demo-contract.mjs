@@ -80,6 +80,7 @@ test("synthetic snapshot exposes the complete UI contract without market data", 
 
 test("public page makes synthetic status and all controls explicit", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  const dashboardJs = await readFile(new URL("../assets/sector-rotation-map.js", import.meta.url), "utf8");
   const dashboardCss = await readFile(new URL("../assets/sector-rotation-map.css", import.meta.url), "utf8");
   const demoCss = await readFile(new URL("../assets/demo.css", import.meta.url), "utf8");
 
@@ -93,6 +94,13 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(html, /data-srm-date/);
   assert.match(html, /data-srm-play/);
   assert.match(html, /data-srm-speed/);
+  assert.match(html, /<option value="0\.5">0\.5×<\/option>/);
+  assert.match(html, /<option value="1" selected>1×<\/option>/);
+  assert.match(html, /<option value="2">2×<\/option>/);
+  assert.doesNotMatch(html, /<option value="4">4×<\/option>/);
+  assert.match(dashboardJs, /const playbackBaseIntervalMs = 200;/);
+  assert.match(dashboardJs, /Math\.round\(playbackBaseIntervalMs \/ speed\)/);
+  assert.doesNotMatch(dashboardJs, /Math\.round\(800 \/ speed\)/);
   assert.match(html, /data-srm-legend/);
   assert.match(html, /data-srm-chart/);
   assert.match(html, /data-srm-method/);

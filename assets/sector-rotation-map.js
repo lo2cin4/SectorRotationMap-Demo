@@ -329,14 +329,15 @@
       const timelineInput = root.querySelector("[data-srm-timeline]");
       const playButton = root.querySelector("[data-srm-play]");
       const speedSelect = root.querySelector("[data-srm-speed]");
+      const playbackBaseIntervalMs = 200;
       let horizon = "60";
       let selectedDate = null;
       let playbackTimer = null;
 
       const syncMotionDuration = () => {
         const speed = Number(speedSelect?.value || 1);
-        const frameInterval = Math.round(800 / speed);
-        const duration = Math.max(140, Math.round(frameInterval * 0.9));
+        const frameInterval = Math.round(playbackBaseIntervalMs / speed);
+        const duration = Math.max(80, Math.round(frameInterval * 0.9));
         chart.style.setProperty("--srm-frame-duration", `${duration}ms`);
       };
 
@@ -431,7 +432,7 @@
           selectedDate = dates[index];
           render();
           if (index === dates.length - 1) stopPlayback();
-        }, Math.round(800 / speed));
+        }, Math.round(playbackBaseIntervalMs / speed));
       };
 
       universeSelect.addEventListener("change", () => {

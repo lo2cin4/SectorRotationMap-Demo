@@ -92,23 +92,29 @@ const artifacts = path.join(__dirname, "artifacts");
     }, motionSymbol);
     assert.equal(smoothFrame.sameNode, true);
     assert.equal(smoothFrame.opacity, 1);
-    assert.equal(smoothFrame.transitionDuration, "0.72s");
+    assert.equal(smoothFrame.transitionDuration, "0.18s");
     assert.match(smoothFrame.transitionProperty, /transform/);
     await page.waitForTimeout(100);
     const middleCenter = await centerOf(motionSymbol);
-    await page.waitForTimeout(650);
+    await page.waitForTimeout(110);
     const endCenter = await centerOf(motionSymbol);
     const distance = (left, right) => Math.hypot(left.x - right.x, left.y - right.y);
     assert.ok(distance(startCenter, endCenter) > 0.1);
     assert.ok(distance(startCenter, middleCenter) > 0.01);
     assert.ok(distance(middleCenter, endCenter) > 0.01);
 
-    await page.locator("[data-srm-speed]").selectOption("4");
-    assert.equal(await page.locator("[data-srm-speed]").inputValue(), "4");
-    assert.equal(
-      await page.locator(".srm-point").first().evaluate((node) => getComputedStyle(node).transitionDuration),
-      "0.18s",
+    assert.deepEqual(
+      await page.locator("[data-srm-speed] option").evaluateAll((options) => options.map((option) => option.value)),
+      ["0.5", "1", "2"],
     );
+    for (const [speed, duration] of [["0.5", "0.36s"], ["1", "0.18s"], ["2", "0.09s"]]) {
+      await page.locator("[data-srm-speed]").selectOption(speed);
+      assert.equal(await page.locator("[data-srm-speed]").inputValue(), speed);
+      assert.equal(
+        await page.locator(".srm-point").first().evaluate((node) => getComputedStyle(node).transitionDuration),
+        duration,
+      );
+    }
     const beforePlayback = Number(await page.locator("[data-srm-timeline]").getAttribute("value"));
     await page.locator("[data-srm-play]").click();
     await page.waitForFunction((before) => Number(document.querySelector("[data-srm-timeline]").value) > before, beforePlayback);
@@ -154,7 +160,7 @@ const artifacts = path.join(__dirname, "artifacts");
     console.log(JSON.stringify({
       status: "pass",
       url: baseUrl,
-      interactions: ["method:hover-focus-click", "timeline:scrub", "timeline:smooth-node-continuity", "timeline:play-pause", "speed:4x", "universe:us_sectors", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
+      interactions: ["method:hover-focus-click", "timeline:scrub", "timeline:smooth-node-continuity", "timeline:play-pause", "speed:0.5x-2x", "universe:us_sectors", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
       screenshots: ["sector-rotation-editorial-desktop.png", "sector-rotation-global-desktop.png", "sector-rotation-desktop.png", "sector-rotation-editorial-mobile.png", "sector-rotation-mobile.png"],
       console_errors: errors,
     }));
