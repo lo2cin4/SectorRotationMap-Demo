@@ -30,6 +30,16 @@ const artifacts = path.join(__dirname, "artifacts");
     assert.match(await page.locator(".demo-banner").innerText(), /SYNTHETIC DEMO/);
     assert.equal(await page.locator("[data-srm-timeline]").getAttribute("max"), "519");
     assert.equal(await page.locator("[data-srm-date]").innerText(), "2026-07-17");
+    const methodDisclosure = page.locator("[data-srm-method]");
+    const methodTrigger = methodDisclosure.locator("summary");
+    const methodPopover = methodDisclosure.locator(".srm-method-popover");
+    await methodTrigger.hover();
+    assert.equal(await methodPopover.isVisible(), true);
+    assert.match(await methodPopover.innerText(), /X = 100/);
+    await page.locator(".srm-history").hover();
+    assert.equal(await methodPopover.isVisible(), false);
+    await methodTrigger.focus();
+    assert.equal(await methodPopover.isVisible(), true);
     await page.screenshot({ path: path.join(artifacts, "sector-rotation-global-desktop.png"), fullPage: true });
 
     await page.locator("[data-srm-timeline]").fill("250");
@@ -120,6 +130,9 @@ const artifacts = path.join(__dirname, "artifacts");
       await mobile.locator(".srm-point").first().evaluate((node) => getComputedStyle(node).transitionDuration),
       "0s",
     );
+    await mobile.locator("[data-srm-method] summary").click();
+    assert.equal(await mobile.locator("[data-srm-method]").getAttribute("open"), "");
+    assert.equal(await mobile.locator(".srm-method-popover").isVisible(), true);
     assert.equal(await mobile.locator(".srm-chart-wrap").evaluate((node) => node.scrollWidth > node.clientWidth), true);
     await mobile.screenshot({ path: path.join(artifacts, "sector-rotation-mobile.png"), fullPage: true });
 
@@ -127,7 +140,7 @@ const artifacts = path.join(__dirname, "artifacts");
     console.log(JSON.stringify({
       status: "pass",
       url: baseUrl,
-      interactions: ["timeline:scrub", "timeline:smooth-node-continuity", "timeline:play-pause", "speed:4x", "universe:us_sectors", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
+      interactions: ["method:hover-focus-click", "timeline:scrub", "timeline:smooth-node-continuity", "timeline:play-pause", "speed:4x", "universe:us_sectors", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
       screenshots: ["sector-rotation-global-desktop.png", "sector-rotation-desktop.png", "sector-rotation-mobile.png"],
       console_errors: errors,
     }));

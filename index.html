@@ -14,7 +14,7 @@
     <main class="demo-page">
       <header class="demo-masthead">
         <a class="demo-mark" href="./" aria-label="Sector Rotation Map 首頁">SR<span>/</span>MAP</a>
-        <p>MEMBER PRODUCT PREVIEW · v0.1</p>
+        <p>MEMBER PRODUCT PREVIEW · v0.2</p>
       </header>
 
       <aside class="demo-banner" role="note">
@@ -24,10 +24,55 @@
 
       <section class="srm-shell" data-srm-root>
         <div class="srm-header">
-          <div>
+          <div class="srm-header-copy">
             <p class="srm-eyebrow">LO2CIN4 MEMBER INTELLIGENCE</p>
             <h1>資金輪動雷達</h1>
             <p class="srm-subtitle">追蹤相對趨勢之上的動能。顏色代表資產類別，象限代表領先、改善、弱化與落後狀態。</p>
+            <details class="srm-method" data-srm-method>
+              <summary aria-label="查看相對強弱計算公式">
+                <span class="srm-method-mark" aria-hidden="true">∑</span>
+                <span>公式與象限</span>
+                <span class="srm-method-toggle" aria-hidden="true">＋</span>
+              </summary>
+              <aside class="srm-method-popover" aria-label="相對趨勢計算公式">
+                <div class="srm-method-head">
+                  <div>
+                    <span>SRM · RTM V1</span>
+                    <strong>相對趨勢計算方法</strong>
+                  </div>
+                  <b>透明公式</b>
+                </div>
+                <ol class="srm-method-formulas">
+                  <li>
+                    <span>相對價格</span>
+                    <code>r<sub>t</sub> = ln(AdjClose<sub>asset,t</sub> / AdjClose<sub>benchmark,t</sub>)</code>
+                  </li>
+                  <li>
+                    <span>h日趨勢</span>
+                    <code>M<sub>t,h</sub> = r<sub>t</sub> − r<sub>t−h</sub></code>
+                  </li>
+                  <li>
+                    <span>平滑趨勢</span>
+                    <code>T<sub>t</sub> = EMA(M<sub>t,h</sub>, s), s = max(5, round(h/4))</code>
+                  </li>
+                  <li>
+                    <span>趨勢加速度</span>
+                    <code>A<sub>t</sub> = T<sub>t</sub> − T<sub>t−s</sub></code>
+                  </li>
+                  <li>
+                    <span>標準化座標</span>
+                    <code>X = 100 + clip(2 × T / RMS<sub>252</sub>(T), −4, 4)<br>Y = 100 + clip(2 × A / RMS<sub>252</sub>(A), −4, 4)</code>
+                  </li>
+                </ol>
+                <div class="srm-method-quadrants" aria-label="四象限定義">
+                  <span><i>01</i>領先 · X≥100 / Y≥100</span>
+                  <span><i>02</i>改善 · X&lt;100 / Y≥100</span>
+                  <span><i>03</i>落後 · X&lt;100 / Y&lt;100</span>
+                  <span><i>04</i>弱化 · X≥100 / Y&lt;100</span>
+                </div>
+                <p><strong>X</strong> 代表相對趨勢，<strong>Y</strong> 代表相對趨勢加速度；100為象限中心。此為自家透明方法，並非 JdK RRG 或 XQ 指標複製。</p>
+              </aside>
+            </details>
           </div>
           <div class="srm-status">
             <span class="srm-live-dot" aria-hidden="true"></span>

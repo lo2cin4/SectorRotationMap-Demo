@@ -281,8 +281,45 @@
     });
   };
 
+  const initializeMethodDisclosure = (root) => {
+    const disclosure = root.querySelector("[data-srm-method]");
+    if (!disclosure || disclosure.dataset.srmMethodReady) return;
+    const trigger = disclosure.querySelector("summary");
+    if (!trigger) return;
+    let pinned = disclosure.open;
+
+    const setOpen = (open) => {
+      disclosure.open = open;
+      trigger.setAttribute("aria-expanded", String(open));
+    };
+
+    disclosure.addEventListener("pointerenter", () => setOpen(true));
+    disclosure.addEventListener("pointerleave", () => {
+      if (!pinned && !disclosure.contains(document.activeElement)) setOpen(false);
+    });
+    disclosure.addEventListener("focusin", () => setOpen(true));
+    disclosure.addEventListener("focusout", (event) => {
+      if (!pinned && !disclosure.contains(event.relatedTarget)) setOpen(false);
+    });
+    trigger.addEventListener("click", (event) => {
+      event.preventDefault();
+      pinned = !pinned;
+      setOpen(pinned);
+    });
+    disclosure.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      pinned = false;
+      setOpen(false);
+      trigger.focus();
+    });
+
+    disclosure.dataset.srmMethodReady = "true";
+    setOpen(disclosure.open);
+  };
+
   const initialize = (root) => {
     try {
+      initializeMethodDisclosure(root);
       const snapshotNode = root.querySelector("[data-srm-snapshot]");
       const snapshot = JSON.parse(snapshotNode.textContent);
       const universeSelect = root.querySelector("[data-srm-universe]");

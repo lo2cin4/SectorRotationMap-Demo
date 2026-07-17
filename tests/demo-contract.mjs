@@ -93,6 +93,11 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(html, /data-srm-speed/);
   assert.match(html, /data-srm-legend/);
   assert.match(html, /data-srm-chart/);
+  assert.match(html, /data-srm-method/);
+  assert.match(html, /查看相對強弱計算公式/);
+  assert.match(html, /AdjClose/);
+  assert.match(html, /RMS<sub>252<\/sub>/);
+  assert.match(html, /並非 JdK RRG 或 XQ/);
   assert.doesNotMatch(html, /snapshots\/latest\.json|sector_rotation\.sqlite3|yfinance/i);
 });
 
