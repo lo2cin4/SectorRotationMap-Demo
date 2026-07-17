@@ -41,15 +41,35 @@ test("synthetic snapshot exposes the complete UI contract without market data", 
     "us_sectors",
     "global_markets",
   ]);
-  assert.deepEqual(snapshot.universes.map(({ member_count }) => member_count), [4, 11, 4]);
+  assert.deepEqual(snapshot.universes.map(({ member_count }) => member_count), [21, 11, 8]);
   assert.deepEqual(walkKeys(snapshot), []);
+
+  const [globalAssets, usSectors, globalMarkets] = snapshot.universes;
+  assert.deepEqual(
+    Object.fromEntries(globalAssets.asset_classes.map(({ id, member_count }) => [id, member_count])),
+    { equity: 11, bond: 4, commodity: 6 },
+  );
+  assert.deepEqual(usSectors.asset_classes.map(({ id }) => id), ["equity"]);
+  assert.deepEqual(globalMarkets.asset_classes.map(({ id }) => id), ["equity"]);
 
   snapshot.universes.forEach((universe) => {
     assert.deepEqual(Object.keys(universe.horizons), ["20", "60", "120"]);
-    Object.values(universe.horizons).forEach(({ points }) => {
+    Object.values(universe.horizons).forEach(({ points, timeline }) => {
       assert.equal(points.length, universe.member_count);
+      assert.equal(timeline.dates.length, 520);
+      assert.equal(timeline.dates[0], "2024-07-22");
+      assert.equal(timeline.dates.at(-1), "2026-07-17");
+      assert.equal(timeline.series.length, universe.member_count);
+      timeline.series.forEach((series) => {
+        assert.equal(series.positions.length, timeline.dates.length);
+        series.positions.forEach(([x, y]) => {
+          assert.ok(x >= 96.2 && x <= 103.8);
+          assert.ok(y >= 96.2 && y <= 103.8);
+        });
+      });
       points.forEach((point) => {
         assert.equal(point.trail.length, 12);
+        assert.ok(["equity", "bond", "commodity"].includes(point.asset_class));
         assert.ok(point.x >= 96.2 && point.x <= 103.8);
         assert.ok(point.y >= 96.2 && point.y <= 103.8);
         assert.ok(["leading", "improving", "weakening", "lagging"].includes(point.quadrant));
@@ -67,6 +87,11 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(html, /data-srm-horizon="20"/);
   assert.match(html, /data-srm-horizon="60"/);
   assert.match(html, /data-srm-horizon="120"/);
+  assert.match(html, /data-srm-timeline/);
+  assert.match(html, /data-srm-date/);
+  assert.match(html, /data-srm-play/);
+  assert.match(html, /data-srm-speed/);
+  assert.match(html, /data-srm-legend/);
   assert.match(html, /data-srm-chart/);
   assert.doesNotMatch(html, /snapshots\/latest\.json|sector_rotation\.sqlite3|yfinance/i);
 });

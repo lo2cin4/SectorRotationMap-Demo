@@ -27,7 +27,7 @@
           <div>
             <p class="srm-eyebrow">LO2CIN4 MEMBER INTELLIGENCE</p>
             <h1>資金輪動雷達</h1>
-            <p class="srm-subtitle">追蹤相對趨勢之上的動能，將資金方向拆成領先、改善、弱化與落後四個可觀察狀態。</p>
+            <p class="srm-subtitle">追蹤相對趨勢之上的動能。顏色代表資產類別，象限代表領先、改善、弱化與落後狀態。</p>
           </div>
           <div class="srm-status">
             <span class="srm-live-dot" aria-hidden="true"></span>
@@ -47,6 +47,8 @@
           </div>
         </div>
 
+        <div class="srm-legend" data-srm-legend aria-label="資產類別圖例"></div>
+
         <div class="srm-insights" aria-live="polite">
           <div class="srm-insight">
             <span>相對趨勢最強</span>
@@ -61,6 +63,33 @@
             <strong data-srm-horizon-label>60D</strong>
           </div>
         </div>
+
+        <section class="srm-history" data-srm-history aria-label="歷史回看">
+          <div class="srm-history-head">
+            <div>
+              <span>歷史回看</span>
+              <strong data-srm-date aria-live="polite">—</strong>
+            </div>
+            <span data-srm-frame-count>—</span>
+          </div>
+          <div class="srm-history-controls">
+            <button type="button" class="srm-play" data-srm-play aria-pressed="false">▶ 播放</button>
+            <input type="range" min="0" max="0" value="0" step="1" data-srm-timeline aria-label="歷史日期">
+            <label class="srm-speed">
+              <span>速度</span>
+              <select data-srm-speed aria-label="播放速度">
+                <option value="0.5">0.5×</option>
+                <option value="1" selected>1×</option>
+                <option value="2">2×</option>
+                <option value="4">4×</option>
+              </select>
+            </label>
+          </div>
+          <div class="srm-history-range" aria-hidden="true">
+            <span data-srm-date-start>—</span>
+            <span data-srm-date-end>—</span>
+          </div>
+        </section>
 
         <p class="srm-scroll-hint">← 左右滑動查看完整象限 →</p>
         <div class="srm-chart-wrap">

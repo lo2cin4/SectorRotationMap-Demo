@@ -25,8 +25,24 @@ const artifacts = path.join(__dirname, "artifacts");
     page.on("pageerror", (error) => errors.push(error.message));
     await page.goto(baseUrl, { waitUntil: "networkidle" });
     await page.locator('[data-srm-rendered="global_assets:60"]').waitFor();
-    assert.equal(await page.locator(".srm-point").count(), 4);
+    assert.equal(await page.locator(".srm-point").count(), 21);
+    assert.equal(await page.locator(".srm-legend-item").count(), 3);
     assert.match(await page.locator(".demo-banner").innerText(), /SYNTHETIC DEMO/);
+    assert.equal(await page.locator("[data-srm-timeline]").getAttribute("max"), "519");
+    assert.equal(await page.locator("[data-srm-date]").innerText(), "2026-07-17");
+    await page.screenshot({ path: path.join(artifacts, "sector-rotation-global-desktop.png"), fullPage: true });
+
+    await page.locator("[data-srm-timeline]").fill("250");
+    assert.equal(await page.locator("[data-srm-timeline]").getAttribute("value"), "250");
+    assert.notEqual(await page.locator("[data-srm-date]").innerText(), "2026-07-17");
+
+    await page.locator("[data-srm-speed]").selectOption("4");
+    assert.equal(await page.locator("[data-srm-speed]").inputValue(), "4");
+    const beforePlayback = Number(await page.locator("[data-srm-timeline]").getAttribute("value"));
+    await page.locator("[data-srm-play]").click();
+    await page.waitForFunction((before) => Number(document.querySelector("[data-srm-timeline]").value) > before, beforePlayback);
+    await page.locator("[data-srm-play]").click();
+    assert.equal(await page.locator("[data-srm-play]").getAttribute("aria-pressed"), "false");
 
     await page.locator("[data-srm-universe]").selectOption("us_sectors");
     await page.locator('[data-srm-rendered="us_sectors:60"]').waitFor();
@@ -57,8 +73,8 @@ const artifacts = path.join(__dirname, "artifacts");
     console.log(JSON.stringify({
       status: "pass",
       url: baseUrl,
-      interactions: ["universe:us_sectors", "horizon:120", "point:keyboard-tooltip"],
-      screenshots: ["sector-rotation-desktop.png", "sector-rotation-mobile.png"],
+      interactions: ["timeline:scrub", "timeline:play-pause", "speed:4x", "universe:us_sectors", "horizon:120", "point:keyboard-tooltip"],
+      screenshots: ["sector-rotation-global-desktop.png", "sector-rotation-desktop.png", "sector-rotation-mobile.png"],
       console_errors: errors,
     }));
   } finally {
