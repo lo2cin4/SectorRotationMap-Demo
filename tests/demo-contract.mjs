@@ -111,6 +111,10 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(html, /data-srm-date/);
   assert.match(html, /data-srm-play/);
   assert.match(html, /data-srm-speed/);
+  assert.match(html, /data-srm-trail-window/);
+  for (const days of [10, 20, 50, 100, 150, 200, 250]) {
+    assert.match(html, new RegExp(`<option value="${days}"${days === 20 ? " selected" : ""}>${days}`));
+  }
   assert.match(html, /<option value="0\.5">0\.5×<\/option>/);
   assert.match(html, /<option value="1" selected>1×<\/option>/);
   assert.match(html, /<option value="2">2×<\/option>/);
@@ -159,6 +163,11 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(dashboardJs, /class: "srm-paw-tail"/);
   assert.match(dashboardJs, /class: "srm-cat-paw"/);
   assert.match(dashboardJs, /const pawCount = 5;/);
+  assert.match(dashboardJs, /const pointsAt = \(horizonPayload, frameIndex, trailWindow\)/);
+  assert.match(dashboardJs, /historyEnd - trailWindow/);
+  assert.match(dashboardJs, /class: "srm-cat-paw-pad"/);
+  assert.equal((dashboardJs.match(/class: "srm-cat-paw-toe"/g) || []).length, 4);
+  assert.doesNotMatch(dashboardJs, /svgNode\("ellipse", \{ cx: -0\.8, cy: 0, rx: 2\.35/);
   assert.doesNotMatch(dashboardJs, /srm-energy-rail/);
   assert.doesNotMatch(dashboardCss, /srm-energy-rail/);
   assert.doesNotMatch(dashboardJs, /class: "srm-token-column"/);
@@ -179,7 +188,7 @@ test("public repository excludes canonical state and production snapshots", asyn
   const visit = async (directory, relative = "") => {
     const files = [];
     for (const entry of await readdir(directory, { withFileTypes: true })) {
-      if ([".git", "artifacts", "_site"].includes(entry.name)) continue;
+      if ([".git", "artifacts", "_site", "node_modules"].includes(entry.name)) continue;
       const childRelative = `${relative}${entry.name}`;
       const childUrl = new URL(`${entry.name}${entry.isDirectory() ? "/" : ""}`, directory);
       if (entry.isDirectory()) files.push(...await visit(childUrl, `${childRelative}/`));

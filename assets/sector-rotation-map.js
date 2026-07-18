@@ -138,7 +138,7 @@
       const directionY = scaleY(directionStart[2]);
       const angle = Math.atan2(nextY - directionY, nextX - directionX) * (180 / Math.PI);
       const side = index % 2 === 0 ? 1 : -1;
-      const transform = `translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${angle.toFixed(1)}) translate(0 ${side * 1.8}) scale(0.9 ${side * 0.9})`;
+      const transform = `translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${angle.toFixed(1)}) translate(0 ${side * 2.2}) scale(1.05 ${side * 1.05})`;
       if (paw.getAttribute("transform") !== transform) paw.setAttribute("transform", transform);
       if (paw.getAttribute("visibility") !== "visible") paw.setAttribute("visibility", "visible");
     });
@@ -176,11 +176,14 @@
           for (let pawIndex = 0; pawIndex < pawCount; pawIndex += 1) {
             const paw = svgNode("g", { class: "srm-cat-paw", visibility: "hidden" });
             paw.append(
-              svgNode("ellipse", { cx: -0.8, cy: 0, rx: 2.35, ry: 1.7, class: "srm-cat-paw-pad" }),
-              svgNode("circle", { cx: 1.2, cy: -1.65, r: 0.72, class: "srm-cat-paw-toe" }),
-              svgNode("circle", { cx: 2.2, cy: -0.7, r: 0.72, class: "srm-cat-paw-toe" }),
-              svgNode("circle", { cx: 2.2, cy: 0.7, r: 0.72, class: "srm-cat-paw-toe" }),
-              svgNode("circle", { cx: 1.2, cy: 1.65, r: 0.72, class: "srm-cat-paw-toe" }),
+              svgNode("path", {
+                d: "M -4 0 C -4 -2 -2.5 -3 -1 -2.2 C 0.3 -1.5 1.1 -0.9 1.4 0 C 1.1 0.9 0.3 1.5 -1 2.2 C -2.5 3 -4 2 -4 0 Z",
+                class: "srm-cat-paw-pad",
+              }),
+              svgNode("ellipse", { cx: 1.3, cy: -2.65, rx: 0.95, ry: 0.8, class: "srm-cat-paw-toe" }),
+              svgNode("ellipse", { cx: 3.05, cy: -1.15, rx: 0.95, ry: 0.8, class: "srm-cat-paw-toe" }),
+              svgNode("ellipse", { cx: 3.15, cy: 1.05, rx: 0.95, ry: 0.8, class: "srm-cat-paw-toe" }),
+              svgNode("ellipse", { cx: 1.45, cy: 2.65, rx: 0.95, ry: 0.8, class: "srm-cat-paw-toe" }),
             );
             pawTail.appendChild(paw);
           }
@@ -358,7 +361,7 @@
     });
   };
 
-  const pointsAt = (horizonPayload, frameIndex) => {
+  const pointsAt = (horizonPayload, frameIndex, trailWindow) => {
     if (!hasTimeline(horizonPayload)) return horizonPayload.points;
     const { dates, series } = horizonPayload.timeline;
     const metadata = new Map(horizonPayload.points.map((point) => [point.symbol, point]));
@@ -367,14 +370,18 @@
       const current = item.positions[frameIndex];
       if (!Array.isArray(current)) return [];
       const [x, y] = current;
-      const start = Math.max(0, frameIndex - 55);
-      const trail = item.positions
-        .slice(start, frameIndex + 1)
-        .flatMap((position, offset) => (
-          Array.isArray(position) && ((start + offset) % 5 === 0 || start + offset === frameIndex)
-            ? [[dates[start + offset], position[0], position[1]]]
-            : []
-        ));
+      const historyEnd = Math.max(0, Math.floor((frameIndex - 1) / 5) * 5);
+      const start = Math.max(0, historyEnd - trailWindow);
+      const sampleIndexes = Array.from({ length: pawCount }, (_, index) => (
+        Math.round(start + ((historyEnd - start) * index) / (pawCount - 1))
+      ));
+      const history = [...new Set(sampleIndexes)].flatMap((index) => {
+        const position = item.positions[index];
+        return Array.isArray(position) ? [[dates[index], position[0], position[1]]] : [];
+      });
+      const trail = frameIndex === 0
+        ? [[dates[frameIndex], x, y]]
+        : [...history, [dates[frameIndex], x, y]];
       return [{
         ...base,
         x,
@@ -436,6 +443,7 @@
       const timelineInput = root.querySelector("[data-srm-timeline]");
       const playButton = root.querySelector("[data-srm-play]");
       const speedSelect = root.querySelector("[data-srm-speed]");
+      const trailWindowSelect = root.querySelector("[data-srm-trail-window]");
       const playbackBaseIntervalMs = 50;
       let horizon = "60";
       let selectedDate = null;
@@ -541,12 +549,14 @@
 
       const render = () => {
         const { universe, horizonPayload } = currentPayload();
+        const trailWindow = Number(trailWindowSelect?.value || 20);
+        root.dataset.srmTrailDays = String(trailWindow);
         const dates = hasTimeline(horizonPayload) ? horizonPayload.timeline.dates : [];
         const frameIndex = dates.length > 0 ? closestDateIndex(dates, selectedDate) : -1;
         if (frameIndex >= 0) selectedDate = dates[frameIndex];
         const allPoints = decoratePoints(
           universe,
-          frameIndex >= 0 ? pointsAt(horizonPayload, frameIndex) : horizonPayload.points,
+          frameIndex >= 0 ? pointsAt(horizonPayload, frameIndex, trailWindow) : horizonPayload.points,
         );
         if (activeCategory && !allPoints.some((point) => point.category === activeCategory)) activeCategory = null;
         const points = activeCategory
@@ -677,6 +687,10 @@
         if (playbackTimer === null) return;
         stopPlayback();
         startPlayback();
+      });
+      trailWindowSelect?.addEventListener("change", () => {
+        stopPlayback();
+        render();
       });
       syncMotionDuration();
       render();

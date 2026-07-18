@@ -19,6 +19,7 @@ const taskDurationCeilings = { 0.5: 2300, 1: 2500, 2: 3300 };
     await page.locator("[data-srm-timeline]").fill("200");
     await page.locator("[data-srm-timeline]").dispatchEvent("input");
     await page.locator("[data-srm-speed]").selectOption(String(playbackSpeed));
+    await page.locator("[data-srm-trail-window]").selectOption("250");
     const before = Object.fromEntries((await client.send("Performance.getMetrics")).metrics.map(({ name, value }) => [name, value]));
     const result = await page.evaluate(async () => {
       const root = document.querySelector("[data-srm-root]");
@@ -46,6 +47,7 @@ const taskDurationCeilings = { 0.5: 2300, 1: 2500, 2: 3300 };
         longTasks,
         pawTails: document.querySelectorAll(".srm-paw-tail").length,
         catPaws: document.querySelectorAll(".srm-cat-paw").length,
+        trailWindow: document.querySelector("[data-srm-trail-window]").value,
         catSprites: document.querySelectorAll(".srm-cat-sprite").length,
       };
     });
@@ -56,6 +58,7 @@ const taskDurationCeilings = { 0.5: 2300, 1: 2500, 2: 3300 };
     assert.ok(result.advancedFrames >= minimumFrames && result.advancedFrames <= maximumFrames, JSON.stringify(result));
     assert.equal(result.pawTails, 21);
     assert.equal(result.catPaws, 105);
+    assert.equal(result.trailWindow, "250");
     assert.equal(result.catSprites, 21);
     assert.ok(result.mutations.attributes <= (attributeMutationCeilings[playbackSpeed] || attributeMutationCeilings[1]), JSON.stringify(result));
     assert.ok(result.mutations.childList <= 260, JSON.stringify(result));

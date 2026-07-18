@@ -28,6 +28,9 @@ const artifacts = path.join(__dirname, "artifacts");
     assert.equal(await page.locator(".srm-point").count(), 21);
     assert.equal(await page.locator(".srm-paw-tail").count(), 21);
     assert.equal(await page.locator(".srm-cat-paw").count(), 105);
+    assert.equal(await page.locator(".srm-cat-paw-pad").count(), 105);
+    assert.equal(await page.locator(".srm-cat-paw-toe").count(), 420);
+    assert.equal(await page.locator(".srm-cat-paw-pad").first().evaluate((node) => node.tagName.toLowerCase()), "path");
     assert.equal(await page.locator(".srm-cat-sprite").count(), 21);
     assert.equal(await page.locator(".srm-cat-aura").count(), 0);
     assert.equal(await page.locator(".srm-cat-shadow").count(), 0);
@@ -127,6 +130,11 @@ const artifacts = path.join(__dirname, "artifacts");
       await page.locator("[data-srm-speed] option").evaluateAll((options) => options.map((option) => option.value)),
       ["0.5", "1", "2"],
     );
+    assert.deepEqual(
+      await page.locator("[data-srm-trail-window] option").evaluateAll((options) => options.map((option) => option.value)),
+      ["10", "20", "50", "100", "150", "200", "250"],
+    );
+    assert.equal(await page.locator("[data-srm-trail-window]").inputValue(), "20");
     for (const [speed, duration] of [["0.5", "0.09s"], ["1", "0.045s"], ["2", "0.023s"]]) {
       await page.locator("[data-srm-speed]").selectOption(speed);
       assert.equal(await page.locator("[data-srm-speed]").inputValue(), speed);
@@ -137,6 +145,16 @@ const artifacts = path.join(__dirname, "artifacts");
     }
     await page.locator("[data-srm-timeline]").fill("300");
     await page.locator("[data-srm-timeline]").dispatchEvent("input");
+    const trailDateBefore = await page.locator("[data-srm-date]").innerText();
+    const shortTrailSignature = await page.locator(".srm-paw-tail").first().getAttribute("data-srm-trail-signature");
+    await page.locator("[data-srm-trail-window]").selectOption("250");
+    assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-trail-days"), "250");
+    assert.equal(await page.locator("[data-srm-date]").innerText(), trailDateBefore);
+    const longTrailSignature = await page.locator(".srm-paw-tail").first().getAttribute("data-srm-trail-signature");
+    assert.notEqual(longTrailSignature, shortTrailSignature);
+    assert.ok(longTrailSignature.split("|")[0] < shortTrailSignature.split("|")[0]);
+    assert.equal(await page.locator(".srm-cat-paw").count(), 105);
+    await page.locator("[data-srm-trail-window]").selectOption("20");
     assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "1");
     assert.match(await page.locator(".srm-cat-sprite").first().getAttribute("href"), /cat-walk-1\.png/);
     await page.locator("[data-srm-timeline]").fill("301");
@@ -273,7 +291,7 @@ const artifacts = path.join(__dirname, "artifacts");
     console.log(JSON.stringify({
       status: "pass",
       url: baseUrl,
-      interactions: ["method:hover-focus-click", "timeline:2019-scrub", "timeline:smooth-node-continuity", "timeline:raf-play-pause", "speed:0.5x-2x", "universe:us_sectors", "drilldown:pointer-keyboard", "industry-filter:technology-all", "visual:isometric-platforms-pixel-cat-paws", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
+      interactions: ["method:hover-focus-click", "timeline:2019-scrub", "timeline:smooth-node-continuity", "timeline:raf-play-pause", "speed:0.5x-2x", "paw-history:10-250d", "universe:us_sectors", "drilldown:pointer-keyboard", "industry-filter:technology-all", "visual:isometric-platforms-pixel-cat-paws", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
       screenshots: ["sector-rotation-editorial-desktop.png", "sector-rotation-global-desktop.png", "sector-rotation-industry-technology.png", "sector-rotation-desktop.png", "sector-rotation-editorial-mobile.png", "sector-rotation-industry-mobile.png", "sector-rotation-mobile.png"],
       console_errors: errors,
     }));
