@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile, readdir, stat } from "node:fs/promises";
 import test from "node:test";
+import { inflateSync } from "node:zlib";
 
 import { buildSyntheticSnapshot } from "../demo-snapshot.js";
 
@@ -28,6 +29,83 @@ const walkKeys = (value, found = []) => {
     });
   }
   return found;
+};
+
+const paeth = (left, above, upperLeft) => {
+  const estimate = left + above - upperLeft;
+  const leftDistance = Math.abs(estimate - left);
+  const aboveDistance = Math.abs(estimate - above);
+  const upperLeftDistance = Math.abs(estimate - upperLeft);
+  if (leftDistance <= aboveDistance && leftDistance <= upperLeftDistance) return left;
+  return aboveDistance <= upperLeftDistance ? above : upperLeft;
+};
+
+const decodeRgbaPng = (buffer) => {
+  const width = buffer.readUInt32BE(16);
+  const height = buffer.readUInt32BE(20);
+  assert.equal(buffer[24], 8, "cat sprites must use 8-bit channels");
+  assert.equal(buffer[25], 6, "cat sprites must be RGBA PNGs");
+  assert.equal(buffer[28], 0, "cat sprites must not be interlaced");
+  const idat = [];
+  for (let offset = 8; offset < buffer.length;) {
+    const length = buffer.readUInt32BE(offset);
+    const type = buffer.toString("ascii", offset + 4, offset + 8);
+    if (type === "IDAT") idat.push(buffer.subarray(offset + 8, offset + 8 + length));
+    offset += 12 + length;
+  }
+  const raw = inflateSync(Buffer.concat(idat));
+  const bytesPerPixel = 4;
+  const stride = width * bytesPerPixel;
+  const rgba = Buffer.alloc(width * height * bytesPerPixel);
+  let inputOffset = 0;
+  for (let y = 0; y < height; y += 1) {
+    const filter = raw[inputOffset];
+    inputOffset += 1;
+    for (let x = 0; x < stride; x += 1) {
+      const encoded = raw[inputOffset + x];
+      const outputOffset = y * stride + x;
+      const left = x >= bytesPerPixel ? rgba[outputOffset - bytesPerPixel] : 0;
+      const above = y > 0 ? rgba[outputOffset - stride] : 0;
+      const upperLeft = y > 0 && x >= bytesPerPixel ? rgba[outputOffset - stride - bytesPerPixel] : 0;
+      const predictor = filter === 0 ? 0
+        : filter === 1 ? left
+          : filter === 2 ? above
+            : filter === 3 ? Math.floor((left + above) / 2)
+              : filter === 4 ? paeth(left, above, upperLeft)
+                : assert.fail(`unsupported PNG filter ${filter}`);
+      rgba[outputOffset] = (encoded + predictor) & 0xff;
+    }
+    inputOffset += stride;
+  }
+  return { width, height, rgba };
+};
+
+const alphaBounds = ({ width, height, rgba }) => {
+  let left = width;
+  let top = height;
+  let right = -1;
+  let bottom = -1;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (rgba[(y * width + x) * 4 + 3] === 0) continue;
+      left = Math.min(left, x);
+      top = Math.min(top, y);
+      right = Math.max(right, x);
+      bottom = Math.max(bottom, y);
+    }
+  }
+  return [left, top, right + 1, bottom + 1];
+};
+
+const changedPixels = (left, right, fromY, toY) => {
+  let changed = 0;
+  for (let y = fromY; y < toY; y += 1) {
+    for (let x = 0; x < left.width; x += 1) {
+      const offset = (y * left.width + x) * 4;
+      if (!left.rgba.subarray(offset, offset + 4).equals(right.rgba.subarray(offset, offset + 4))) changed += 1;
+    }
+  }
+  return changed;
 };
 
 test("synthetic snapshot exposes the complete UI contract without market data", () => {
@@ -145,7 +223,7 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(dashboardCss, /\.srm-point-hitarea/);
   assert.match(dashboardCss, /image-rendering: pixelated/);
   assert.match(dashboardCss, /\.srm-paw-tail/);
-  assert.match(dashboardCss, /\.srm-cat-paw-pad/);
+  assert.match(dashboardCss, /\.srm-cat-paw-trace/);
   assert.match(dashboardCss, /\.srm-drilldown/);
   assert.match(dashboardJs, /catFrameUrls/);
   assert.match(dashboardJs, /frameIndex % catFrameUrls\.length/);
@@ -162,13 +240,14 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.doesNotMatch(dashboardJs, /class: "srm-cat-shadow"/);
   assert.doesNotMatch(dashboardCss, /\.srm-cat-shadow/);
   assert.doesNotMatch(dashboardCss, /data-srm-cat-frame=.*translateY/);
-  assert.match(dashboardJs, /class: "srm-paw-tail"/);
-  assert.match(dashboardJs, /class: "srm-cat-paw"/);
-  assert.match(dashboardJs, /const pawCount = 5;/);
+  assert.match(dashboardJs, /class: "srm-paw-tail srm-cat-paw-trace"/);
+  assert.match(dashboardJs, /const pawStepSessions = 5;/);
+  assert.match(dashboardJs, /const maxPawCount = 50;/);
+  assert.doesNotMatch(dashboardJs, /const pawCount = 5;/);
   assert.match(dashboardJs, /const pointsAt = \(horizonPayload, frameIndex, trailWindow\)/);
   assert.match(dashboardJs, /historyEnd - trailWindow/);
-  assert.match(dashboardJs, /class: "srm-cat-paw-pad"/);
-  assert.equal((dashboardJs.match(/class: "srm-cat-paw-toe"/g) || []).length, 4);
+  assert.match(dashboardJs, /catPawSubpath/);
+  assert.match(dashboardJs, /data-srm-paw-count/);
   assert.doesNotMatch(dashboardJs, /svgNode\("ellipse", \{ cx: -0\.8, cy: 0, rx: 2\.35/);
   assert.doesNotMatch(dashboardJs, /srm-energy-rail/);
   assert.doesNotMatch(dashboardCss, /srm-energy-rail/);
@@ -180,6 +259,15 @@ test("public page makes synthetic status and all controls explicit", async () =>
     assert.deepEqual([...frame.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
     assert.ok(frame.length > 1000);
   });
+  const decodedCatFrames = catFrames.map(decodeRgbaPng);
+  decodedCatFrames.forEach(({ width, height }) => assert.deepEqual([width, height], [64, 64]));
+  const frameBounds = decodedCatFrames.map(alphaBounds);
+  frameBounds.slice(1).forEach((bounds) => assert.deepEqual(bounds, frameBounds[0], "cat frames must share one fixed alpha box"));
+  const fixedBodyEndY = 42;
+  for (let index = 1; index < decodedCatFrames.length; index += 1) {
+    assert.equal(changedPixels(decodedCatFrames[0], decodedCatFrames[index], 0, fixedBodyEndY), 0, "head and torso must remain pixel-identical");
+    assert.ok(changedPixels(decodedCatFrames[0], decodedCatFrames[index], fixedBodyEndY, 64) >= 45, "leg poses must be visually distinct");
+  }
   assert.match(dashboardCss, /font-family: var\(--srm-brand-serif\)/);
   assert.match(demoCss, /lo2cin4/);
   assert.doesNotMatch(html, /snapshots\/latest\.json|sector_rotation\.sqlite3|yfinance/i);

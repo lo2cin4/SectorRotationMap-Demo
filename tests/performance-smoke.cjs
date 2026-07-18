@@ -16,7 +16,7 @@ const taskDurationCeilings = { 0.5: 2300, 1: 2500, 2: 3300 };
     await client.send("Performance.enable");
     await page.goto(baseUrl, { waitUntil: "networkidle" });
     await page.locator('[data-srm-rendered="global_assets:60"]').waitFor();
-    await page.locator("[data-srm-timeline]").fill("200");
+    await page.locator("[data-srm-timeline]").fill("500");
     await page.locator("[data-srm-timeline]").dispatchEvent("input");
     await page.locator("[data-srm-speed]").selectOption(String(playbackSpeed));
     await page.locator("[data-srm-trail-window]").selectOption("250");
@@ -46,7 +46,9 @@ const taskDurationCeilings = { 0.5: 2300, 1: 2500, 2: 3300 };
         mutations,
         longTasks,
         pawTails: document.querySelectorAll(".srm-paw-tail").length,
-        catPaws: document.querySelectorAll(".srm-cat-paw").length,
+        pawTraceNodes: document.querySelectorAll(".srm-cat-paw-trace").length,
+        visibleCatPaws: [...document.querySelectorAll(".srm-paw-tail")]
+          .reduce((sum, tail) => sum + Number(tail.dataset.srmPawCount), 0),
         trailWindow: document.querySelector("[data-srm-trail-window]").value,
         catSprites: document.querySelectorAll(".srm-cat-sprite").length,
       };
@@ -57,7 +59,8 @@ const taskDurationCeilings = { 0.5: 2300, 1: 2500, 2: 3300 };
     const [minimumFrames, maximumFrames] = frameRanges[playbackSpeed] || frameRanges[1];
     assert.ok(result.advancedFrames >= minimumFrames && result.advancedFrames <= maximumFrames, JSON.stringify(result));
     assert.equal(result.pawTails, 21);
-    assert.equal(result.catPaws, 105);
+    assert.equal(result.pawTraceNodes, 21);
+    assert.equal(result.visibleCatPaws, 1050);
     assert.equal(result.trailWindow, "250");
     assert.equal(result.catSprites, 21);
     assert.ok(result.mutations.attributes <= (attributeMutationCeilings[playbackSpeed] || attributeMutationCeilings[1]), JSON.stringify(result));

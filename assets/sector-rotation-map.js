@@ -111,22 +111,37 @@
     };
   };
 
-  const pawCount = 5;
+  const pawStepSessions = 5;
+  const maxPawCount = 50;
+
+  const catPawSubpath = (x, y, angle, side) => {
+    const radians = angle * (Math.PI / 180);
+    const cosine = Math.cos(radians);
+    const sine = Math.sin(radians);
+    const transform = ([localX, localY]) => {
+      const scaledX = localX * 0.9;
+      const scaledY = (localY * side + side * 2.2) * 0.9;
+      return [
+        x + cosine * scaledX - sine * scaledY,
+        y + sine * scaledX + cosine * scaledY,
+      ];
+    };
+    const polygon = (points) => points
+      .map(transform)
+      .map(([pointX, pointY], index) => `${index === 0 ? "M" : "L"} ${pointX.toFixed(2)} ${pointY.toFixed(2)}`)
+      .join(" ") + " Z";
+    const pad = polygon([[-4, 0], [-3, -2.2], [-1, -2.5], [1.4, 0], [-1, 2.5], [-3, 2.2]]);
+    const toes = [[1.3, -2.65], [3.05, -1.15], [3.15, 1.05], [1.45, 2.65]]
+      .map(([toeX, toeY]) => polygon([[toeX - 0.8, toeY], [toeX, toeY - 0.7], [toeX + 0.8, toeY], [toeX, toeY + 0.7]]));
+    return [pad, ...toes].join(" ");
+  };
 
   const updatePawTail = (tail, trail) => {
     const history = trail.slice(0, -1);
     const signature = history.map((position) => position[0]).join("|");
     if (tail.dataset.srmTrailSignature === signature) return;
     tail.dataset.srmTrailSignature = signature;
-    const paws = [...tail.querySelectorAll(".srm-cat-paw")];
-    paws.forEach((paw, index) => {
-      if (history.length === 0) {
-        if (paw.getAttribute("visibility") !== "hidden") paw.setAttribute("visibility", "hidden");
-        return;
-      }
-      const progress = pawCount === 1 ? 1 : index / (pawCount - 1);
-      const historyIndex = Math.round(progress * (history.length - 1));
-      const position = history[historyIndex];
+    const pathData = history.map((position, historyIndex) => {
       const previous = history[Math.max(0, historyIndex - 1)] || position;
       const next = historyIndex + 1 < history.length ? history[historyIndex + 1] : position;
       const directionStart = historyIndex + 1 < history.length ? position : previous;
@@ -137,11 +152,11 @@
       const directionX = scaleX(directionStart[1]);
       const directionY = scaleY(directionStart[2]);
       const angle = Math.atan2(nextY - directionY, nextX - directionX) * (180 / Math.PI);
-      const side = index % 2 === 0 ? 1 : -1;
-      const transform = `translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${angle.toFixed(1)}) translate(0 ${side * 2.2}) scale(1.05 ${side * 1.05})`;
-      if (paw.getAttribute("transform") !== transform) paw.setAttribute("transform", transform);
-      if (paw.getAttribute("visibility") !== "visible") paw.setAttribute("visibility", "visible");
-    });
+      const side = Math.floor(position[3] / pawStepSessions) % 2 === 0 ? 1 : -1;
+      return catPawSubpath(x, y, angle, side);
+    }).join(" ");
+    if (tail.getAttribute("d") !== pathData) tail.setAttribute("d", pathData);
+    tail.dataset.srmPawCount = String(history.length);
   };
 
   const drawPoints = (root, svg, points, onDrilldown) => {
@@ -166,27 +181,14 @@
       if (trail.length > 1) {
         let pawTail = existingTrails.get(point.symbol);
         if (!pawTail) {
-          pawTail = svgNode("g", {
-            class: "srm-paw-tail",
+          pawTail = svgNode("path", {
+            class: "srm-paw-tail srm-cat-paw-trace",
             "data-srm-symbol": point.symbol,
+            "data-srm-paw-count": "0",
             "aria-hidden": "true",
           });
           pawTail.style.setProperty("--srm-token-color", color);
           pawTail.setAttribute("data-srm-category", point.category || point.asset_class || "quadrant");
-          for (let pawIndex = 0; pawIndex < pawCount; pawIndex += 1) {
-            const paw = svgNode("g", { class: "srm-cat-paw", visibility: "hidden" });
-            paw.append(
-              svgNode("path", {
-                d: "M -4 0 C -4 -2 -2.5 -3 -1 -2.2 C 0.3 -1.5 1.1 -0.9 1.4 0 C 1.1 0.9 0.3 1.5 -1 2.2 C -2.5 3 -4 2 -4 0 Z",
-                class: "srm-cat-paw-pad",
-              }),
-              svgNode("ellipse", { cx: 1.3, cy: -2.65, rx: 0.95, ry: 0.8, class: "srm-cat-paw-toe" }),
-              svgNode("ellipse", { cx: 3.05, cy: -1.15, rx: 0.95, ry: 0.8, class: "srm-cat-paw-toe" }),
-              svgNode("ellipse", { cx: 3.15, cy: 1.05, rx: 0.95, ry: 0.8, class: "srm-cat-paw-toe" }),
-              svgNode("ellipse", { cx: 1.45, cy: 2.65, rx: 0.95, ry: 0.8, class: "srm-cat-paw-toe" }),
-            );
-            pawTail.appendChild(paw);
-          }
           trailsLayer.appendChild(pawTail);
         }
         updatePawTail(pawTail, trail);
@@ -370,18 +372,17 @@
       const current = item.positions[frameIndex];
       if (!Array.isArray(current)) return [];
       const [x, y] = current;
-      const historyEnd = Math.max(0, Math.floor((frameIndex - 1) / 5) * 5);
-      const start = Math.max(0, historyEnd - trailWindow);
-      const sampleIndexes = Array.from({ length: pawCount }, (_, index) => (
-        Math.round(start + ((historyEnd - start) * index) / (pawCount - 1))
-      ));
-      const history = [...new Set(sampleIndexes)].flatMap((index) => {
+      const historyEnd = Math.max(0, Math.floor((frameIndex - 1) / pawStepSessions) * pawStepSessions);
+      const firstHistoryIndex = Math.max(0, historyEnd - trailWindow + pawStepSessions);
+      const sampleIndexes = [];
+      for (let index = firstHistoryIndex; index <= historyEnd; index += pawStepSessions) sampleIndexes.push(index);
+      const history = sampleIndexes.slice(-maxPawCount).flatMap((index) => {
         const position = item.positions[index];
-        return Array.isArray(position) ? [[dates[index], position[0], position[1]]] : [];
+        return Array.isArray(position) ? [[dates[index], position[0], position[1], index]] : [];
       });
       const trail = frameIndex === 0
-        ? [[dates[frameIndex], x, y]]
-        : [...history, [dates[frameIndex], x, y]];
+        ? [[dates[frameIndex], x, y, frameIndex]]
+        : [...history, [dates[frameIndex], x, y, frameIndex]];
       return [{
         ...base,
         x,
