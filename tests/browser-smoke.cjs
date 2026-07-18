@@ -267,10 +267,25 @@ const artifacts = path.join(__dirname, "artifacts");
       await mobile.locator(".srm-cat-sprite").evaluateAll((sprites) => sprites.every((sprite) => sprite.getAnimations().length === 0)),
       true,
     );
+    const mobileInitialTimelineIndex = Number(await mobile.locator("[data-srm-timeline]").getAttribute("value"));
+    assert.equal(
+      Number(await mobile.locator("[data-srm-root]").getAttribute("data-srm-cat-frame")),
+      (mobileInitialTimelineIndex % 3) + 1,
+    );
+    await mobile.locator("[data-srm-timeline]").fill("300");
+    await mobile.locator("[data-srm-timeline]").dispatchEvent("input");
     assert.equal(await mobile.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "1");
+    await mobile.locator("[data-srm-timeline]").fill("301");
+    await mobile.locator("[data-srm-timeline]").dispatchEvent("input");
+    assert.equal(await mobile.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "2");
+    assert.match(await mobile.locator(".srm-cat-sprite").first().getAttribute("href"), /cat-walk-2\.png/);
     await mobile.locator("[data-srm-play]").click();
     await mobile.waitForTimeout(220);
-    assert.equal(await mobile.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "1");
+    const reducedMotionTimelineIndex = Number(await mobile.locator("[data-srm-timeline]").getAttribute("value"));
+    assert.equal(
+      Number(await mobile.locator("[data-srm-root]").getAttribute("data-srm-cat-frame")),
+      (reducedMotionTimelineIndex % 3) + 1,
+    );
     await mobile.locator("[data-srm-play]").click();
     assert.equal(await mobile.locator("[data-srm-root]").getAttribute("data-srm-design"), "isometric-city-v1");
     await mobile.screenshot({ path: path.join(artifacts, "sector-rotation-editorial-mobile.png"), fullPage: true });
@@ -291,7 +306,7 @@ const artifacts = path.join(__dirname, "artifacts");
     console.log(JSON.stringify({
       status: "pass",
       url: baseUrl,
-      interactions: ["method:hover-focus-click", "timeline:2019-scrub", "timeline:smooth-node-continuity", "timeline:raf-play-pause", "speed:0.5x-2x", "paw-history:10-250d", "universe:us_sectors", "drilldown:pointer-keyboard", "industry-filter:technology-all", "visual:isometric-platforms-pixel-cat-paws", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
+      interactions: ["method:hover-focus-click", "timeline:2019-scrub", "timeline:smooth-node-continuity", "timeline:raf-play-pause", "speed:0.5x-2x", "paw-history:10-250d", "universe:us_sectors", "drilldown:pointer-keyboard", "industry-filter:technology-all", "visual:isometric-platforms-pixel-cat-paws", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion-discrete-gait"],
       screenshots: ["sector-rotation-editorial-desktop.png", "sector-rotation-global-desktop.png", "sector-rotation-industry-technology.png", "sector-rotation-desktop.png", "sector-rotation-editorial-mobile.png", "sector-rotation-industry-mobile.png", "sector-rotation-mobile.png"],
       console_errors: errors,
     }));

@@ -211,10 +211,10 @@
         const hitArea = svgNode("circle", { cx: 0, cy: -8, r: 20, class: "srm-point-hitarea", "aria-hidden": "true" });
         const catSprite = svgNode("image", {
           href: catFrameUrls[0],
-          x: -18,
-          y: -29,
-          width: 36,
-          height: 36,
+          x: -22,
+          y: -35,
+          width: 44,
+          height: 44,
           class: "srm-cat-sprite",
           preserveAspectRatio: "xMidYMid meet",
           "aria-hidden": "true",
@@ -579,7 +579,7 @@
           render();
         };
         drawPoints(root, chart, points, activateDrilldown);
-        const catFrameIndex = frameIndex >= 0 && !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        const catFrameIndex = frameIndex >= 0
           ? frameIndex % catFrameUrls.length
           : 0;
         syncCatFrame(catFrameIndex);

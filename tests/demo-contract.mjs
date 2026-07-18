@@ -149,6 +149,8 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(dashboardCss, /\.srm-drilldown/);
   assert.match(dashboardJs, /catFrameUrls/);
   assert.match(dashboardJs, /frameIndex % catFrameUrls\.length/);
+  assert.doesNotMatch(dashboardJs, /!window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches/);
+  assert.match(dashboardJs, /x: -22,[\s\S]*y: -35,[\s\S]*width: 44,[\s\S]*height: 44/);
   assert.doesNotMatch(dashboardJs, /catWalkBaseFrameMs|catFrameInterval|lastCatFrameTime/);
   assert.match(dashboardJs, /root\.dataset\.srmCatFrame/);
   assert.match(dashboardJs, /class: "srm-cat-sprite"/);
