@@ -5,7 +5,7 @@ const baseUrl = process.env.SRM_DEMO_URL || "http://127.0.0.1:4173/";
 const edge = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const playbackSpeed = Number(process.env.SRM_PLAYBACK_SPEED || 1);
 const frameRanges = { 0.5: [28, 34], 1: [48, 66], 2: [100, 125] };
-const attributeMutationCeilings = { 0.5: 2200, 1: 3600, 2: 7000 };
+const attributeMutationCeilings = { 0.5: 2400, 1: 4500, 2: 9000 };
 const taskDurationCeilings = { 0.5: 2300, 1: 2500, 2: 3300 };
 
 (async () => {

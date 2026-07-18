@@ -437,7 +437,6 @@
       const playButton = root.querySelector("[data-srm-play]");
       const speedSelect = root.querySelector("[data-srm-speed]");
       const playbackBaseIntervalMs = 50;
-      const catWalkBaseFrameMs = 120;
       let horizon = "60";
       let selectedDate = null;
       let playbackTimer = null;
@@ -488,7 +487,6 @@
         if (playbackTimer !== null) window.cancelAnimationFrame(playbackTimer);
         playbackTimer = null;
         root.dataset.srmPlaying = "false";
-        syncCatFrame(0);
         if (playButton) {
           playButton.textContent = "▶ 播放";
           playButton.setAttribute("aria-pressed", "false");
@@ -571,6 +569,10 @@
           render();
         };
         drawPoints(root, chart, points, activateDrilldown);
+        const catFrameIndex = frameIndex >= 0 && !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? frameIndex % catFrameUrls.length
+          : 0;
+        syncCatFrame(catFrameIndex);
         const nextChromeSignature = `${universe.id}:${activeCategory || "all"}:${points.map(({ symbol }) => symbol).join(",")}`;
         if (nextChromeSignature !== renderedChromeSignature) {
           drawLegend(root, universe, points);
@@ -603,26 +605,14 @@
         }
         const speed = Number(speedSelect?.value || 1);
         const frameInterval = Math.round(playbackBaseIntervalMs / speed);
-        const catFrameInterval = Math.max(60, Math.round(catWalkBaseFrameMs / speed));
         let lastFrameTime = null;
-        let lastCatFrameTime = null;
-        let catFrameIndex = 0;
-        const reduceCatMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         syncMotionDuration();
         root.dataset.srmPlaying = "true";
-        syncCatFrame(0);
         playButton.textContent = "❚❚ 暫停";
         playButton.setAttribute("aria-pressed", "true");
         const tick = (timestamp) => {
           if (playbackTimer === null) return;
           if (lastFrameTime === null) lastFrameTime = timestamp;
-          if (lastCatFrameTime === null) lastCatFrameTime = timestamp;
-          if (!reduceCatMotion && timestamp - lastCatFrameTime >= catFrameInterval) {
-            const catFrameSteps = Math.floor((timestamp - lastCatFrameTime) / catFrameInterval);
-            catFrameIndex = (catFrameIndex + catFrameSteps) % catFrameUrls.length;
-            lastCatFrameTime += catFrameSteps * catFrameInterval;
-            syncCatFrame(catFrameIndex);
-          }
           if (timestamp - lastFrameTime >= frameInterval) {
             lastFrameTime = timestamp;
             index += 1;

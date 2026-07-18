@@ -135,6 +135,20 @@ const artifacts = path.join(__dirname, "artifacts");
         duration,
       );
     }
+    await page.locator("[data-srm-timeline]").fill("300");
+    await page.locator("[data-srm-timeline]").dispatchEvent("input");
+    assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "1");
+    assert.match(await page.locator(".srm-cat-sprite").first().getAttribute("href"), /cat-walk-1\.png/);
+    await page.locator("[data-srm-timeline]").fill("301");
+    await page.locator("[data-srm-timeline]").dispatchEvent("input");
+    assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "2");
+    assert.match(await page.locator(".srm-cat-sprite").first().getAttribute("href"), /cat-walk-2\.png/);
+    await page.locator("[data-srm-timeline]").fill("302");
+    await page.locator("[data-srm-timeline]").dispatchEvent("input");
+    assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "3");
+    assert.match(await page.locator(".srm-cat-sprite").first().getAttribute("href"), /cat-walk-3\.png/);
+    await page.locator("[data-srm-timeline]").fill("300");
+    await page.locator("[data-srm-timeline]").dispatchEvent("input");
     const beforePlayback = Number(await page.locator("[data-srm-timeline]").getAttribute("value"));
     const initialCatHref = await page.locator(".srm-cat-sprite").first().getAttribute("href");
     assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-playing"), "false");
@@ -144,25 +158,26 @@ const artifacts = path.join(__dirname, "artifacts");
     const walkCycle = await page.evaluate(async () => {
       const root = document.querySelector("[data-srm-root]");
       const sprite = document.querySelector(".srm-cat-sprite");
-      const samples = new Map();
-      const capture = () => samples.set(root.dataset.srmCatFrame, {
+      const timeline = document.querySelector("[data-srm-timeline]");
+      const samples = [];
+      const capture = () => samples.push({
+        index: Number(timeline.value),
         frame: root.dataset.srmCatFrame,
         href: sprite.getAttribute("href"),
-        transform: getComputedStyle(sprite).transform,
       });
       capture();
       const observer = new MutationObserver(capture);
       observer.observe(root, { attributes: true, attributeFilter: ["data-srm-cat-frame"] });
-      await new Promise((resolve) => setTimeout(resolve, 420));
+      await new Promise((resolve) => {
+        const wait = () => Number(timeline.value) >= 305 ? resolve() : requestAnimationFrame(wait);
+        wait();
+      });
       observer.disconnect();
-      return [...samples.values()];
+      return samples;
     });
-    assert.deepEqual(walkCycle.map(({ frame }) => frame).sort(), ["1", "2", "3"]);
+    assert.deepEqual([...new Set(walkCycle.map(({ frame }) => frame))].sort(), ["1", "2", "3"]);
     assert.equal(new Set(walkCycle.map(({ href }) => href)).size, 3);
-    assert.notEqual(
-      walkCycle.find(({ frame }) => frame === "2").transform,
-      walkCycle.find(({ frame }) => frame === "1").transform,
-    );
+    assert.equal(walkCycle.every(({ index, frame }) => Number(frame) === (index % 3) + 1), true);
     assert.notEqual(
       await page.locator(".srm-cat-sprite").first().getAttribute("href"),
       initialCatHref,
@@ -171,7 +186,11 @@ const artifacts = path.join(__dirname, "artifacts");
     await page.locator("[data-srm-play]").click();
     assert.equal(await page.locator("[data-srm-play]").getAttribute("aria-pressed"), "false");
     assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-playing"), "false");
-    assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "1");
+    const pausedTimelineIndex = Number(await page.locator("[data-srm-timeline]").getAttribute("value"));
+    assert.equal(
+      Number(await page.locator("[data-srm-root]").getAttribute("data-srm-cat-frame")),
+      (pausedTimelineIndex % 3) + 1,
+    );
 
     await page.locator("[data-srm-timeline]").fill("1967");
     await page.locator("[data-srm-universe]").selectOption("us_sectors");

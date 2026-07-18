@@ -657,12 +657,7 @@
 .srm-cat-sprite {
   pointer-events: none;
   image-rendering: pixelated;
-  transform-box: fill-box;
-  transform-origin: center bottom;
-  transform: translateY(0);
 }
-.srm-shell[data-srm-playing="true"][data-srm-cat-frame="2"] .srm-cat-sprite { transform: translateY(-2px); }
-.srm-shell[data-srm-playing="true"][data-srm-cat-frame="3"] .srm-cat-sprite { transform: translateY(0.8px); }
 .srm-point-label {
   paint-order: stroke;
   stroke: #06101d;

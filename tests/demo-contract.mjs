@@ -144,8 +144,8 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(dashboardCss, /\.srm-cat-paw-pad/);
   assert.match(dashboardCss, /\.srm-drilldown/);
   assert.match(dashboardJs, /catFrameUrls/);
-  assert.match(dashboardJs, /const catWalkBaseFrameMs = 120;/);
-  assert.match(dashboardJs, /Math\.round\(catWalkBaseFrameMs \/ speed\)/);
+  assert.match(dashboardJs, /frameIndex % catFrameUrls\.length/);
+  assert.doesNotMatch(dashboardJs, /catWalkBaseFrameMs|catFrameInterval|lastCatFrameTime/);
   assert.match(dashboardJs, /root\.dataset\.srmCatFrame/);
   assert.match(dashboardJs, /class: "srm-cat-sprite"/);
   assert.match(pagesWorkflow, /assets\/cat-walk-\*\.png/);
@@ -155,6 +155,7 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.doesNotMatch(dashboardCss, /\.srm-cat-aura/);
   assert.doesNotMatch(dashboardJs, /class: "srm-cat-shadow"/);
   assert.doesNotMatch(dashboardCss, /\.srm-cat-shadow/);
+  assert.doesNotMatch(dashboardCss, /data-srm-cat-frame=.*translateY/);
   assert.match(dashboardJs, /class: "srm-paw-tail"/);
   assert.match(dashboardJs, /class: "srm-cat-paw"/);
   assert.match(dashboardJs, /const pawCount = 5;/);
