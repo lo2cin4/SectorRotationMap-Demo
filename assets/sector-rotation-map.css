@@ -654,12 +654,15 @@
 
 .srm-point[data-srm-drilldown-target] { cursor: pointer; }
 .srm-point-hitarea { fill: transparent; pointer-events: all; }
-.srm-cat-shadow { fill: var(--srm-token-color); opacity: 0.18; }
-.srm-cat-aura { fill: color-mix(in srgb, var(--srm-token-color) 8%, transparent); stroke: var(--srm-token-color); stroke-width: 0.8; opacity: 0.55; }
 .srm-cat-sprite {
   pointer-events: none;
   image-rendering: pixelated;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  transform: translateY(0);
 }
+.srm-shell[data-srm-playing="true"][data-srm-cat-frame="2"] .srm-cat-sprite { transform: translateY(-2px); }
+.srm-shell[data-srm-playing="true"][data-srm-cat-frame="3"] .srm-cat-sprite { transform: translateY(0.8px); }
 .srm-point-label {
   paint-order: stroke;
   stroke: #06101d;
@@ -852,9 +855,6 @@
 .srm-shell[data-srm-design="isometric-city-v1"] .srm-grid { stroke: rgba(200, 217, 236, 0.09); }
 .srm-shell[data-srm-design="isometric-city-v1"] .srm-axis { stroke: rgba(216, 177, 105, 0.5); }
 .srm-shell[data-srm-design="isometric-city-v1"] .srm-point-label { stroke: #03060b; stroke-width: 4px; }
-.srm-shell[data-srm-design="isometric-city-v1"] .srm-cat-aura { stroke-width: 0.9; opacity: 0.64; }
-
-
 /* lo2cin4 editorial v2: compact research workbench */
 .srm-shell[data-srm-design="lo2cin4-editorial-v2"] {
   --srm-void: #030509;

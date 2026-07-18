@@ -29,6 +29,8 @@ const artifacts = path.join(__dirname, "artifacts");
     assert.equal(await page.locator(".srm-paw-tail").count(), 21);
     assert.equal(await page.locator(".srm-cat-paw").count(), 105);
     assert.equal(await page.locator(".srm-cat-sprite").count(), 21);
+    assert.equal(await page.locator(".srm-cat-aura").count(), 0);
+    assert.equal(await page.locator(".srm-cat-shadow").count(), 0);
     assert.equal(await page.locator(".srm-token-column").count(), 0);
     assert.equal(
       await page.locator(".srm-cat-sprite").evaluateAll((sprites) => sprites.every((sprite) => sprite.getAttribute("href")?.includes("cat-walk-"))),
@@ -139,7 +141,28 @@ const artifacts = path.join(__dirname, "artifacts");
     assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "1");
     await page.locator("[data-srm-play]").click();
     assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-playing"), "true");
-    await page.waitForFunction(() => document.querySelector("[data-srm-root]").dataset.srmCatFrame !== "1");
+    const walkCycle = await page.evaluate(async () => {
+      const root = document.querySelector("[data-srm-root]");
+      const sprite = document.querySelector(".srm-cat-sprite");
+      const samples = new Map();
+      const capture = () => samples.set(root.dataset.srmCatFrame, {
+        frame: root.dataset.srmCatFrame,
+        href: sprite.getAttribute("href"),
+        transform: getComputedStyle(sprite).transform,
+      });
+      capture();
+      const observer = new MutationObserver(capture);
+      observer.observe(root, { attributes: true, attributeFilter: ["data-srm-cat-frame"] });
+      await new Promise((resolve) => setTimeout(resolve, 420));
+      observer.disconnect();
+      return [...samples.values()];
+    });
+    assert.deepEqual(walkCycle.map(({ frame }) => frame).sort(), ["1", "2", "3"]);
+    assert.equal(new Set(walkCycle.map(({ href }) => href)).size, 3);
+    assert.notEqual(
+      walkCycle.find(({ frame }) => frame === "2").transform,
+      walkCycle.find(({ frame }) => frame === "1").transform,
+    );
     assert.notEqual(
       await page.locator(".srm-cat-sprite").first().getAttribute("href"),
       initialCatHref,

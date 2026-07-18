@@ -206,8 +206,6 @@
         const title = svgNode("title");
         title.textContent = `${point.label_zh_hant} (${point.symbol})`;
         const hitArea = svgNode("circle", { cx: 0, cy: -8, r: 20, class: "srm-point-hitarea", "aria-hidden": "true" });
-        const shadow = svgNode("ellipse", { cx: 0, cy: 4, rx: 12, ry: 3.2, class: "srm-cat-shadow" });
-        const aura = svgNode("ellipse", { cx: 0, cy: -8, rx: 17, ry: 10.5, class: "srm-cat-aura" });
         const catSprite = svgNode("image", {
           href: catFrameUrls[0],
           x: -18,
@@ -218,7 +216,7 @@
           preserveAspectRatio: "xMidYMid meet",
           "aria-hidden": "true",
         });
-        group.append(title, hitArea, shadow, aura, catSprite, svgNode("text", { x: 0, y: 0, class: "srm-point-label" }));
+        group.append(title, hitArea, catSprite, svgNode("text", { x: 0, y: 0, class: "srm-point-label" }));
         pointsLayer.appendChild(group);
       }
 
@@ -439,7 +437,7 @@
       const playButton = root.querySelector("[data-srm-play]");
       const speedSelect = root.querySelector("[data-srm-speed]");
       const playbackBaseIntervalMs = 50;
-      const catWalkFrameMs = 280;
+      const catWalkBaseFrameMs = 120;
       let horizon = "60";
       let selectedDate = null;
       let playbackTimer = null;
@@ -605,6 +603,7 @@
         }
         const speed = Number(speedSelect?.value || 1);
         const frameInterval = Math.round(playbackBaseIntervalMs / speed);
+        const catFrameInterval = Math.max(60, Math.round(catWalkBaseFrameMs / speed));
         let lastFrameTime = null;
         let lastCatFrameTime = null;
         let catFrameIndex = 0;
@@ -618,10 +617,10 @@
           if (playbackTimer === null) return;
           if (lastFrameTime === null) lastFrameTime = timestamp;
           if (lastCatFrameTime === null) lastCatFrameTime = timestamp;
-          if (!reduceCatMotion && timestamp - lastCatFrameTime >= catWalkFrameMs) {
-            const catFrameSteps = Math.floor((timestamp - lastCatFrameTime) / catWalkFrameMs);
+          if (!reduceCatMotion && timestamp - lastCatFrameTime >= catFrameInterval) {
+            const catFrameSteps = Math.floor((timestamp - lastCatFrameTime) / catFrameInterval);
             catFrameIndex = (catFrameIndex + catFrameSteps) % catFrameUrls.length;
-            lastCatFrameTime += catFrameSteps * catWalkFrameMs;
+            lastCatFrameTime += catFrameSteps * catFrameInterval;
             syncCatFrame(catFrameIndex);
           }
           if (timestamp - lastFrameTime >= frameInterval) {
