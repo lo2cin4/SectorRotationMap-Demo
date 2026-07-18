@@ -4,7 +4,8 @@
   const NS = "http://www.w3.org/2000/svg";
   const currentScriptUrl = document.currentScript?.src;
   const assetBaseUrl = currentScriptUrl ? new URL(".", currentScriptUrl) : new URL("assets/", document.baseURI);
-  const catFrameUrls = [1, 2, 3].map((frame) => new URL(`cat-walk-${frame}.png`, assetBaseUrl).href);
+  const catStripUrl = new URL("cat-walk-strip.png", assetBaseUrl).href;
+  const catFrameCount = 3;
   const quadrantColors = {
     leading: "#ff5c8f",
     improving: "#3de1d5",
@@ -211,16 +212,27 @@
         const title = svgNode("title");
         title.textContent = `${point.label_zh_hant} (${point.symbol})`;
         const hitArea = svgNode("circle", { cx: 0, cy: -8, r: 20, class: "srm-point-hitarea", "aria-hidden": "true" });
-        const catSprite = svgNode("image", {
-          href: catFrameUrls[0],
+        const catSprite = svgNode("svg", {
           x: -22,
           y: -35,
           width: 44,
           height: 44,
+          viewBox: "0 0 64 64",
           class: "srm-cat-sprite",
           preserveAspectRatio: "xMidYMid meet",
+          overflow: "hidden",
           "aria-hidden": "true",
         });
+        catSprite.appendChild(svgNode("image", {
+          href: catStripUrl,
+          x: 0,
+          y: 0,
+          width: 192,
+          height: 64,
+          class: "srm-cat-strip",
+          preserveAspectRatio: "none",
+          "aria-hidden": "true",
+        }));
         group.append(title, hitArea, catSprite, svgNode("text", { x: 0, y: 0, class: "srm-point-label" }));
         pointsLayer.appendChild(group);
       }
@@ -457,9 +469,9 @@
 
       const syncCatFrame = (frameIndex) => {
         root.dataset.srmCatFrame = String(frameIndex + 1);
-        const href = catFrameUrls[frameIndex];
+        const viewBox = `${frameIndex * 64} 0 64 64`;
         chart.querySelectorAll(".srm-cat-sprite").forEach((sprite) => {
-          if (sprite.getAttribute("href") !== href) sprite.setAttribute("href", href);
+          if (sprite.getAttribute("viewBox") !== viewBox) sprite.setAttribute("viewBox", viewBox);
         });
       };
 
@@ -581,7 +593,7 @@
         };
         drawPoints(root, chart, points, activateDrilldown);
         const catFrameIndex = frameIndex >= 0
-          ? frameIndex % catFrameUrls.length
+          ? frameIndex % catFrameCount
           : 0;
         syncCatFrame(catFrameIndex);
         const nextChromeSignature = `${universe.id}:${activeCategory || "all"}:${points.map(({ symbol }) => symbol).join(",")}`;

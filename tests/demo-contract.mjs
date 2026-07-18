@@ -108,6 +108,17 @@ const changedPixels = (left, right, fromY, toY) => {
   return changed;
 };
 
+const changedAlphaPixels = (left, right, fromY, toY) => {
+  let changed = 0;
+  for (let y = fromY; y < toY; y += 1) {
+    for (let x = 0; x < left.width; x += 1) {
+      const alphaOffset = (y * left.width + x) * 4 + 3;
+      if (left.rgba[alphaOffset] !== right.rgba[alphaOffset]) changed += 1;
+    }
+  }
+  return changed;
+};
+
 test("synthetic snapshot exposes the complete UI contract without market data", () => {
   const snapshot = buildSyntheticSnapshot();
 
@@ -225,13 +236,17 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(dashboardCss, /\.srm-paw-tail/);
   assert.match(dashboardCss, /\.srm-cat-paw-trace/);
   assert.match(dashboardCss, /\.srm-drilldown/);
-  assert.match(dashboardJs, /catFrameUrls/);
-  assert.match(dashboardJs, /frameIndex % catFrameUrls\.length/);
+  assert.match(dashboardJs, /catStripUrl/);
+  assert.match(dashboardJs, /const catFrameCount = 3;/);
+  assert.match(dashboardJs, /frameIndex % catFrameCount/);
   assert.doesNotMatch(dashboardJs, /!window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches/);
   assert.match(dashboardJs, /x: -22,[\s\S]*y: -35,[\s\S]*width: 44,[\s\S]*height: 44/);
   assert.doesNotMatch(dashboardJs, /catWalkBaseFrameMs|catFrameInterval|lastCatFrameTime/);
   assert.match(dashboardJs, /root\.dataset\.srmCatFrame/);
   assert.match(dashboardJs, /class: "srm-cat-sprite"/);
+  assert.match(dashboardJs, /class: "srm-cat-strip"/);
+  assert.match(dashboardJs, /viewBox: "0 0 64 64"/);
+  assert.match(dashboardJs, /sprite\.setAttribute\("viewBox"/);
   assert.match(pagesWorkflow, /assets\/cat-walk-\*\.png/);
   assert.match(dashboardJs, /class: "srm-point-hitarea"/);
   assert.match(dashboardJs, /syncCatFrame/);
@@ -267,6 +282,11 @@ test("public page makes synthetic status and all controls explicit", async () =>
   for (let index = 1; index < decodedCatFrames.length; index += 1) {
     assert.equal(changedPixels(decodedCatFrames[0], decodedCatFrames[index], 0, fixedBodyEndY), 0, "head and torso must remain pixel-identical");
     assert.ok(changedPixels(decodedCatFrames[0], decodedCatFrames[index], fixedBodyEndY, 64) >= 45, "leg poses must be visually distinct");
+  }
+  for (let left = 0; left < decodedCatFrames.length; left += 1) {
+    for (let right = left + 1; right < decodedCatFrames.length; right += 1) {
+      assert.ok(changedAlphaPixels(decodedCatFrames[left], decodedCatFrames[right], fixedBodyEndY, 64) >= 100, "every leg pose needs a clearly different silhouette");
+    }
   }
   assert.match(dashboardCss, /font-family: var\(--srm-brand-serif\)/);
   assert.match(demoCss, /lo2cin4/);

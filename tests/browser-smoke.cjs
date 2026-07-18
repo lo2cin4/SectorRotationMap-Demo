@@ -31,21 +31,20 @@ const artifacts = path.join(__dirname, "artifacts");
     assert.equal(await page.locator(".srm-cat-paw-trace").first().evaluate((node) => node.tagName.toLowerCase()), "path");
     assert.equal(await page.locator(".srm-paw-tail").evaluateAll((tails) => tails.reduce((sum, tail) => sum + Number(tail.dataset.srmPawCount), 0)), 84);
     assert.equal(await page.locator(".srm-cat-sprite").count(), 21);
+    assert.equal(await page.locator(".srm-cat-strip").count(), 21);
     assert.equal(await page.locator(".srm-cat-aura").count(), 0);
     assert.equal(await page.locator(".srm-cat-shadow").count(), 0);
     assert.equal(await page.locator(".srm-token-column").count(), 0);
     assert.equal(
-      await page.locator(".srm-cat-sprite").evaluateAll((sprites) => sprites.every((sprite) => sprite.getAttribute("href")?.includes("cat-walk-"))),
+      await page.locator(".srm-cat-sprite").evaluateAll((sprites) => sprites.every((sprite) => sprite.tagName.toLowerCase() === "svg")),
       true,
     );
-    const catAssetStatuses = await page.evaluate(async () => {
-      const current = document.querySelector(".srm-cat-sprite").getAttribute("href");
-      return Promise.all([1, 2, 3].map(async (frame) => {
-        const response = await fetch(current.replace(/cat-walk-\d+\.png(?:\?.*)?$/, `cat-walk-${frame}.png`));
-        return response.status;
-      }));
-    });
-    assert.deepEqual(catAssetStatuses, [200, 200, 200]);
+    assert.equal(
+      await page.locator(".srm-cat-strip").evaluateAll((strips) => strips.every((strip) => strip.getAttribute("href")?.includes("cat-walk-strip.png"))),
+      true,
+    );
+    const catStripStatus = await page.locator(".srm-cat-strip").first().evaluate(async (strip) => (await fetch(strip.getAttribute("href"))).status);
+    assert.equal(catStripStatus, 200);
     assert.equal(await page.locator(".srm-platform").count(), 4);
     assert.equal(await page.locator(".srm-legend-item").count(), 3);
     assert.match(await page.locator(".demo-banner").innerText(), /SYNTHETIC DEMO/);
@@ -166,19 +165,20 @@ const artifacts = path.join(__dirname, "artifacts");
     assert.equal(await page.locator(".srm-cat-paw-trace").count(), 21);
     await page.locator("[data-srm-trail-window]").selectOption("20");
     assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "1");
-    assert.match(await page.locator(".srm-cat-sprite").first().getAttribute("href"), /cat-walk-1\.png/);
+    assert.equal(await page.locator(".srm-cat-sprite").first().getAttribute("viewBox"), "0 0 64 64");
     await page.locator("[data-srm-timeline]").fill("301");
     await page.locator("[data-srm-timeline]").dispatchEvent("input");
     assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "2");
-    assert.match(await page.locator(".srm-cat-sprite").first().getAttribute("href"), /cat-walk-2\.png/);
+    assert.equal(await page.locator(".srm-cat-sprite").first().getAttribute("viewBox"), "64 0 64 64");
     await page.locator("[data-srm-timeline]").fill("302");
     await page.locator("[data-srm-timeline]").dispatchEvent("input");
     assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "3");
-    assert.match(await page.locator(".srm-cat-sprite").first().getAttribute("href"), /cat-walk-3\.png/);
+    assert.equal(await page.locator(".srm-cat-sprite").first().getAttribute("viewBox"), "128 0 64 64");
     await page.locator("[data-srm-timeline]").fill("300");
     await page.locator("[data-srm-timeline]").dispatchEvent("input");
     const beforePlayback = Number(await page.locator("[data-srm-timeline]").getAttribute("value"));
-    const initialCatHref = await page.locator(".srm-cat-sprite").first().getAttribute("href");
+    const initialCatViewBox = await page.locator(".srm-cat-sprite").first().getAttribute("viewBox");
+    const stableCatStripHref = await page.locator(".srm-cat-strip").first().getAttribute("href");
     assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-playing"), "false");
     assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "1");
     await page.locator("[data-srm-play]").click();
@@ -191,7 +191,8 @@ const artifacts = path.join(__dirname, "artifacts");
       const capture = () => samples.push({
         index: Number(timeline.value),
         frame: root.dataset.srmCatFrame,
-        href: sprite.getAttribute("href"),
+        viewBox: sprite.getAttribute("viewBox"),
+        stripHref: sprite.querySelector(".srm-cat-strip").getAttribute("href"),
       });
       capture();
       const observer = new MutationObserver(capture);
@@ -204,11 +205,12 @@ const artifacts = path.join(__dirname, "artifacts");
       return samples;
     });
     assert.deepEqual([...new Set(walkCycle.map(({ frame }) => frame))].sort(), ["1", "2", "3"]);
-    assert.equal(new Set(walkCycle.map(({ href }) => href)).size, 3);
+    assert.deepEqual([...new Set(walkCycle.map(({ viewBox }) => viewBox))].sort(), ["0 0 64 64", "128 0 64 64", "64 0 64 64"]);
+    assert.deepEqual([...new Set(walkCycle.map(({ stripHref }) => stripHref))], [stableCatStripHref]);
     assert.equal(walkCycle.every(({ index, frame }) => Number(frame) === (index % 3) + 1), true);
     assert.notEqual(
-      await page.locator(".srm-cat-sprite").first().getAttribute("href"),
-      initialCatHref,
+      await page.locator(".srm-cat-sprite").first().getAttribute("viewBox"),
+      initialCatViewBox,
     );
     await page.waitForFunction((before) => Number(document.querySelector("[data-srm-timeline]").value) > before, beforePlayback);
     await page.locator("[data-srm-play]").click();
@@ -288,7 +290,8 @@ const artifacts = path.join(__dirname, "artifacts");
     await mobile.locator("[data-srm-timeline]").fill("301");
     await mobile.locator("[data-srm-timeline]").dispatchEvent("input");
     assert.equal(await mobile.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "2");
-    assert.match(await mobile.locator(".srm-cat-sprite").first().getAttribute("href"), /cat-walk-2\.png/);
+    assert.equal(await mobile.locator(".srm-cat-sprite").first().getAttribute("viewBox"), "64 0 64 64");
+    assert.match(await mobile.locator(".srm-cat-strip").first().getAttribute("href"), /cat-walk-strip\.png/);
     await mobile.locator("[data-srm-play]").click();
     await mobile.waitForTimeout(220);
     const reducedMotionTimelineIndex = Number(await mobile.locator("[data-srm-timeline]").getAttribute("value"));

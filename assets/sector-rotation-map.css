@@ -651,7 +651,8 @@
 
 .srm-point[data-srm-drilldown-target] { cursor: pointer; }
 .srm-point-hitarea { fill: transparent; pointer-events: all; }
-.srm-cat-sprite {
+.srm-cat-sprite,
+.srm-cat-strip {
   pointer-events: none;
   image-rendering: pixelated;
 }
