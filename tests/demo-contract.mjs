@@ -182,6 +182,7 @@ test("synthetic snapshot exposes the complete UI contract without market data", 
 
 test("public page makes synthetic status and all controls explicit", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  const demoJs = await readFile(new URL("../demo-snapshot.js", import.meta.url), "utf8");
   const dashboardJs = await readFile(new URL("../assets/sector-rotation-map.js", import.meta.url), "utf8");
   const pagesWorkflow = await readFile(new URL("../.github/workflows/pages.yml", import.meta.url), "utf8");
   const dashboardCss = await readFile(new URL("../assets/sector-rotation-map.css", import.meta.url), "utf8");
@@ -237,6 +238,10 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(dashboardCss, /\.srm-cat-paw-trace/);
   assert.match(dashboardCss, /\.srm-drilldown/);
   assert.match(dashboardJs, /catStripUrl/);
+  assert.match(dashboardJs, /cat-walk-strip\.png\?v=0\.6\.6/);
+  assert.match(html, /sector-rotation-map\.css\?v=0\.6\.6/);
+  assert.match(html, /demo-snapshot\.js\?v=0\.6\.6/);
+  assert.match(demoJs, /sector-rotation-map\.js\?v=0\.6\.6/);
   assert.match(dashboardJs, /const catFrameCount = 3;/);
   assert.match(dashboardJs, /frameIndex % catFrameCount/);
   assert.doesNotMatch(dashboardJs, /!window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches/);

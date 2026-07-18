@@ -4,7 +4,7 @@
   const NS = "http://www.w3.org/2000/svg";
   const currentScriptUrl = document.currentScript?.src;
   const assetBaseUrl = currentScriptUrl ? new URL(".", currentScriptUrl) : new URL("assets/", document.baseURI);
-  const catStripUrl = new URL("cat-walk-strip.png", assetBaseUrl).href;
+  const catStripUrl = new URL("cat-walk-strip.png?v=0.6.6", assetBaseUrl).href;
   const catFrameCount = 3;
   const quadrantColors = {
     leading: "#ff5c8f",
