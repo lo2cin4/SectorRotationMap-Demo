@@ -94,6 +94,7 @@ test("synthetic snapshot exposes the complete UI contract without market data", 
 test("public page makes synthetic status and all controls explicit", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
   const dashboardJs = await readFile(new URL("../assets/sector-rotation-map.js", import.meta.url), "utf8");
+  const pagesWorkflow = await readFile(new URL("../.github/workflows/pages.yml", import.meta.url), "utf8");
   const dashboardCss = await readFile(new URL("../assets/sector-rotation-map.css", import.meta.url), "utf8");
   const demoCss = await readFile(new URL("../assets/demo.css", import.meta.url), "utf8");
   const catFrames = await Promise.all([1, 2, 3].map((frame) => (
@@ -146,6 +147,7 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(dashboardJs, /const catWalkFrameMs = 280;/);
   assert.match(dashboardJs, /root\.dataset\.srmCatFrame/);
   assert.match(dashboardJs, /class: "srm-cat-sprite"/);
+  assert.match(pagesWorkflow, /assets\/cat-walk-\*\.png/);
   assert.match(dashboardJs, /class: "srm-point-hitarea"/);
   assert.match(dashboardJs, /syncCatFrame/);
   assert.match(dashboardJs, /class: "srm-paw-tail"/);
