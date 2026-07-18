@@ -96,6 +96,9 @@ test("public page makes synthetic status and all controls explicit", async () =>
   const dashboardJs = await readFile(new URL("../assets/sector-rotation-map.js", import.meta.url), "utf8");
   const dashboardCss = await readFile(new URL("../assets/sector-rotation-map.css", import.meta.url), "utf8");
   const demoCss = await readFile(new URL("../assets/demo.css", import.meta.url), "utf8");
+  const catFrames = await Promise.all([1, 2, 3].map((frame) => (
+    readFile(new URL(`../assets/cat-walk-${frame}.png`, import.meta.url))
+  )));
 
   assert.match(html, /SYNTHETIC DEMO/);
   assert.match(html, /非真實市場數據/);
@@ -133,18 +136,31 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(dashboardCss, /\.srm-workbench/);
   assert.match(dashboardCss, /\.srm-chart-head/);
   assert.match(dashboardCss, /\.srm-platform--leading/);
-  assert.match(dashboardCss, /\.srm-token-column/);
-  assert.match(dashboardCss, /\.srm-footstep-tail/);
-  assert.match(dashboardCss, /\.srm-footstep-sole/);
+  assert.match(dashboardCss, /\.srm-cat-sprite/);
+  assert.match(dashboardCss, /\.srm-point-hitarea/);
+  assert.match(dashboardCss, /image-rendering: pixelated/);
+  assert.match(dashboardCss, /\.srm-paw-tail/);
+  assert.match(dashboardCss, /\.srm-cat-paw-pad/);
   assert.match(dashboardCss, /\.srm-drilldown/);
-  assert.match(dashboardJs, /class: "srm-footstep-tail"/);
-  assert.match(dashboardJs, /class: "srm-footstep"/);
-  assert.match(dashboardJs, /const footstepCount = 5;/);
+  assert.match(dashboardJs, /catFrameUrls/);
+  assert.match(dashboardJs, /const catWalkFrameMs = 280;/);
+  assert.match(dashboardJs, /root\.dataset\.srmCatFrame/);
+  assert.match(dashboardJs, /class: "srm-cat-sprite"/);
+  assert.match(dashboardJs, /class: "srm-point-hitarea"/);
+  assert.match(dashboardJs, /syncCatFrame/);
+  assert.match(dashboardJs, /class: "srm-paw-tail"/);
+  assert.match(dashboardJs, /class: "srm-cat-paw"/);
+  assert.match(dashboardJs, /const pawCount = 5;/);
   assert.doesNotMatch(dashboardJs, /srm-energy-rail/);
   assert.doesNotMatch(dashboardCss, /srm-energy-rail/);
-  assert.match(dashboardJs, /class: "srm-token-column"/);
+  assert.doesNotMatch(dashboardJs, /class: "srm-token-column"/);
+  assert.doesNotMatch(dashboardCss, /\.srm-token-column/);
   assert.doesNotMatch(dashboardJs, /class: "srm-light-segment"/);
   assert.doesNotMatch(dashboardJs, /feGaussianBlur/);
+  catFrames.forEach((frame) => {
+    assert.deepEqual([...frame.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+    assert.ok(frame.length > 1000);
+  });
   assert.match(dashboardCss, /font-family: var\(--srm-brand-serif\)/);
   assert.match(demoCss, /lo2cin4/);
   assert.doesNotMatch(html, /snapshots\/latest\.json|sector_rotation\.sqlite3|yfinance/i);

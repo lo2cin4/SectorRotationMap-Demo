@@ -2,6 +2,9 @@
   "use strict";
 
   const NS = "http://www.w3.org/2000/svg";
+  const currentScriptUrl = document.currentScript?.src;
+  const assetBaseUrl = currentScriptUrl ? new URL(".", currentScriptUrl) : new URL("assets/", document.baseURI);
+  const catFrameUrls = [1, 2, 3].map((frame) => new URL(`cat-walk-${frame}.png`, assetBaseUrl).href);
   const quadrantColors = {
     leading: "#ff5c8f",
     improving: "#3de1d5",
@@ -102,26 +105,26 @@
     const quadrant = point.quadrant || quadrantFor(point);
     const rightSide = quadrant === "leading" || quadrant === "weakening";
     return {
-      x: rightSide ? -12 : 12,
-      y: index % 3 === 0 ? -12 : index % 3 === 1 ? 5 : 19,
+      x: rightSide ? -22 : 22,
+      y: index % 3 === 0 ? -18 : index % 3 === 1 ? 4 : 20,
       anchor: rightSide ? "end" : "start",
     };
   };
 
-  const footstepCount = 5;
+  const pawCount = 5;
 
-  const updateFootstepTail = (tail, trail) => {
+  const updatePawTail = (tail, trail) => {
     const history = trail.slice(0, -1);
     const signature = history.map((position) => position[0]).join("|");
     if (tail.dataset.srmTrailSignature === signature) return;
     tail.dataset.srmTrailSignature = signature;
-    const footsteps = [...tail.querySelectorAll(".srm-footstep")];
-    footsteps.forEach((footstep, index) => {
+    const paws = [...tail.querySelectorAll(".srm-cat-paw")];
+    paws.forEach((paw, index) => {
       if (history.length === 0) {
-        if (footstep.getAttribute("visibility") !== "hidden") footstep.setAttribute("visibility", "hidden");
+        if (paw.getAttribute("visibility") !== "hidden") paw.setAttribute("visibility", "hidden");
         return;
       }
-      const progress = footstepCount === 1 ? 1 : index / (footstepCount - 1);
+      const progress = pawCount === 1 ? 1 : index / (pawCount - 1);
       const historyIndex = Math.round(progress * (history.length - 1));
       const position = history[historyIndex];
       const previous = history[Math.max(0, historyIndex - 1)] || position;
@@ -135,9 +138,9 @@
       const directionY = scaleY(directionStart[2]);
       const angle = Math.atan2(nextY - directionY, nextX - directionX) * (180 / Math.PI);
       const side = index % 2 === 0 ? 1 : -1;
-      const transform = `translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${angle.toFixed(1)}) scale(1 ${side})`;
-      if (footstep.getAttribute("transform") !== transform) footstep.setAttribute("transform", transform);
-      if (footstep.getAttribute("visibility") !== "visible") footstep.setAttribute("visibility", "visible");
+      const transform = `translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${angle.toFixed(1)}) translate(0 ${side * 1.8}) scale(0.9 ${side * 0.9})`;
+      if (paw.getAttribute("transform") !== transform) paw.setAttribute("transform", transform);
+      if (paw.getAttribute("visibility") !== "visible") paw.setAttribute("visibility", "visible");
     });
   };
 
@@ -146,7 +149,7 @@
     const trailsLayer = svg.querySelector("[data-srm-trails-layer]");
     const pointsLayer = svg.querySelector("[data-srm-points-layer]");
     const existingTrails = new Map(
-      [...trailsLayer.querySelectorAll(".srm-footstep-tail")]
+      [...trailsLayer.querySelectorAll(".srm-paw-tail")]
         .map((node) => [node.dataset.srmSymbol, node]),
     );
     const existingPoints = new Map(
@@ -161,26 +164,29 @@
       const color = colorFor(point);
       const trail = Array.isArray(point.trail) ? point.trail : [];
       if (trail.length > 1) {
-        let footstepTail = existingTrails.get(point.symbol);
-        if (!footstepTail) {
-          footstepTail = svgNode("g", {
-            class: "srm-footstep-tail",
+        let pawTail = existingTrails.get(point.symbol);
+        if (!pawTail) {
+          pawTail = svgNode("g", {
+            class: "srm-paw-tail",
             "data-srm-symbol": point.symbol,
             "aria-hidden": "true",
           });
-          footstepTail.style.setProperty("--srm-token-color", color);
-          footstepTail.setAttribute("data-srm-category", point.category || point.asset_class || "quadrant");
-          for (let footstepIndex = 0; footstepIndex < footstepCount; footstepIndex += 1) {
-            const footstep = svgNode("g", { class: "srm-footstep", visibility: "hidden" });
-            footstep.append(
-              svgNode("ellipse", { cx: -0.6, cy: 0, rx: 2.9, ry: 1.45, class: "srm-footstep-sole" }),
-              svgNode("circle", { cx: 2.55, cy: -0.82, r: 1.05, class: "srm-footstep-toe" }),
+          pawTail.style.setProperty("--srm-token-color", color);
+          pawTail.setAttribute("data-srm-category", point.category || point.asset_class || "quadrant");
+          for (let pawIndex = 0; pawIndex < pawCount; pawIndex += 1) {
+            const paw = svgNode("g", { class: "srm-cat-paw", visibility: "hidden" });
+            paw.append(
+              svgNode("ellipse", { cx: -0.8, cy: 0, rx: 2.35, ry: 1.7, class: "srm-cat-paw-pad" }),
+              svgNode("circle", { cx: 1.2, cy: -1.65, r: 0.72, class: "srm-cat-paw-toe" }),
+              svgNode("circle", { cx: 2.2, cy: -0.7, r: 0.72, class: "srm-cat-paw-toe" }),
+              svgNode("circle", { cx: 2.2, cy: 0.7, r: 0.72, class: "srm-cat-paw-toe" }),
+              svgNode("circle", { cx: 1.2, cy: 1.65, r: 0.72, class: "srm-cat-paw-toe" }),
             );
-            footstepTail.appendChild(footstep);
+            pawTail.appendChild(paw);
           }
-          trailsLayer.appendChild(footstepTail);
+          trailsLayer.appendChild(pawTail);
         }
-        updateFootstepTail(footstepTail, trail);
+        updatePawTail(pawTail, trail);
       } else {
         existingTrails.get(point.symbol)?.remove();
       }
@@ -199,15 +205,20 @@
         });
         const title = svgNode("title");
         title.textContent = `${point.label_zh_hant} (${point.symbol})`;
-        const beam = svgNode("line", { x1: 0, y1: 5, x2: 0, y2: 25, class: "srm-token-beam" });
-        const base = svgNode("ellipse", { cx: 0, cy: 7, rx: 7.5, ry: 2.6, class: "srm-token-base" });
-        const column = svgNode("polygon", {
-          points: "-4,3 -4,-9 0,-14 4,-9 4,3 0,6",
-          class: "srm-token-column",
+        const hitArea = svgNode("circle", { cx: 0, cy: -8, r: 20, class: "srm-point-hitarea", "aria-hidden": "true" });
+        const shadow = svgNode("ellipse", { cx: 0, cy: 4, rx: 12, ry: 3.2, class: "srm-cat-shadow" });
+        const aura = svgNode("ellipse", { cx: 0, cy: -8, rx: 17, ry: 10.5, class: "srm-cat-aura" });
+        const catSprite = svgNode("image", {
+          href: catFrameUrls[0],
+          x: -18,
+          y: -29,
+          width: 36,
+          height: 36,
+          class: "srm-cat-sprite",
+          preserveAspectRatio: "xMidYMid meet",
+          "aria-hidden": "true",
         });
-        const halo = svgNode("ellipse", { cx: 0, cy: -7, rx: 9, ry: 3.2, class: "srm-token-halo" });
-        const core = svgNode("circle", { cx: 0, cy: -10, r: 2.2, class: "srm-token-core" });
-        group.append(title, beam, base, column, halo, core, svgNode("text", { x: 0, y: 0, class: "srm-point-label" }));
+        group.append(title, hitArea, shadow, aura, catSprite, svgNode("text", { x: 0, y: 0, class: "srm-point-label" }));
         pointsLayer.appendChild(group);
       }
 
@@ -428,12 +439,23 @@
       const playButton = root.querySelector("[data-srm-play]");
       const speedSelect = root.querySelector("[data-srm-speed]");
       const playbackBaseIntervalMs = 50;
+      const catWalkFrameMs = 280;
       let horizon = "60";
       let selectedDate = null;
       let playbackTimer = null;
       let activeCategory = null;
       let returnUniverseId = null;
       let renderedChromeSignature = null;
+      root.dataset.srmPlaying = "false";
+      root.dataset.srmCatFrame = "1";
+
+      const syncCatFrame = (frameIndex) => {
+        root.dataset.srmCatFrame = String(frameIndex + 1);
+        const href = catFrameUrls[frameIndex];
+        chart.querySelectorAll(".srm-cat-sprite").forEach((sprite) => {
+          if (sprite.getAttribute("href") !== href) sprite.setAttribute("href", href);
+        });
+      };
 
       const syncMotionDuration = () => {
         const speed = Number(speedSelect?.value || 1);
@@ -467,6 +489,8 @@
       const stopPlayback = () => {
         if (playbackTimer !== null) window.cancelAnimationFrame(playbackTimer);
         playbackTimer = null;
+        root.dataset.srmPlaying = "false";
+        syncCatFrame(0);
         if (playButton) {
           playButton.textContent = "▶ 播放";
           playButton.setAttribute("aria-pressed", "false");
@@ -582,12 +606,24 @@
         const speed = Number(speedSelect?.value || 1);
         const frameInterval = Math.round(playbackBaseIntervalMs / speed);
         let lastFrameTime = null;
+        let lastCatFrameTime = null;
+        let catFrameIndex = 0;
+        const reduceCatMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         syncMotionDuration();
+        root.dataset.srmPlaying = "true";
+        syncCatFrame(0);
         playButton.textContent = "❚❚ 暫停";
         playButton.setAttribute("aria-pressed", "true");
         const tick = (timestamp) => {
           if (playbackTimer === null) return;
           if (lastFrameTime === null) lastFrameTime = timestamp;
+          if (lastCatFrameTime === null) lastCatFrameTime = timestamp;
+          if (!reduceCatMotion && timestamp - lastCatFrameTime >= catWalkFrameMs) {
+            const catFrameSteps = Math.floor((timestamp - lastCatFrameTime) / catWalkFrameMs);
+            catFrameIndex = (catFrameIndex + catFrameSteps) % catFrameUrls.length;
+            lastCatFrameTime += catFrameSteps * catWalkFrameMs;
+            syncCatFrame(catFrameIndex);
+          }
           if (timestamp - lastFrameTime >= frameInterval) {
             lastFrameTime = timestamp;
             index += 1;

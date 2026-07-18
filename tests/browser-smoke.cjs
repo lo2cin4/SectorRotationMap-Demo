@@ -26,9 +26,22 @@ const artifacts = path.join(__dirname, "artifacts");
     await page.goto(baseUrl, { waitUntil: "networkidle" });
     await page.locator('[data-srm-rendered="global_assets:60"]').waitFor();
     assert.equal(await page.locator(".srm-point").count(), 21);
-    assert.equal(await page.locator(".srm-footstep-tail").count(), 21);
-    assert.equal(await page.locator(".srm-footstep").count(), 105);
-    assert.equal(await page.locator(".srm-token-column").count(), 21);
+    assert.equal(await page.locator(".srm-paw-tail").count(), 21);
+    assert.equal(await page.locator(".srm-cat-paw").count(), 105);
+    assert.equal(await page.locator(".srm-cat-sprite").count(), 21);
+    assert.equal(await page.locator(".srm-token-column").count(), 0);
+    assert.equal(
+      await page.locator(".srm-cat-sprite").evaluateAll((sprites) => sprites.every((sprite) => sprite.getAttribute("href")?.includes("cat-walk-"))),
+      true,
+    );
+    const catAssetStatuses = await page.evaluate(async () => {
+      const current = document.querySelector(".srm-cat-sprite").getAttribute("href");
+      return Promise.all([1, 2, 3].map(async (frame) => {
+        const response = await fetch(current.replace(/cat-walk-\d+\.png(?:\?.*)?$/, `cat-walk-${frame}.png`));
+        return response.status;
+      }));
+    });
+    assert.deepEqual(catAssetStatuses, [200, 200, 200]);
     assert.equal(await page.locator(".srm-platform").count(), 4);
     assert.equal(await page.locator(".srm-legend-item").count(), 3);
     assert.match(await page.locator(".demo-banner").innerText(), /SYNTHETIC DEMO/);
@@ -81,7 +94,7 @@ const artifacts = path.join(__dirname, "artifacts");
     }, symbol);
     await page.evaluate((symbol) => {
       window.__srmStablePlaybackPoint = document.querySelector(`.srm-point[data-srm-symbol="${symbol}"]`);
-      window.__srmStableFootstepTail = document.querySelector(`.srm-footstep-tail[data-srm-symbol="${symbol}"]`);
+      window.__srmStablePawTail = document.querySelector(`.srm-paw-tail[data-srm-symbol="${symbol}"]`);
     }, motionSymbol);
     const startCenter = await centerOf(motionSymbol);
     await page.locator("[data-srm-timeline]").fill("251");
@@ -90,7 +103,7 @@ const artifacts = path.join(__dirname, "artifacts");
       const style = getComputedStyle(point);
       return {
         sameNode: point === window.__srmStablePlaybackPoint,
-        sameFootstepTail: document.querySelector(`.srm-footstep-tail[data-srm-symbol="${symbol}"]`) === window.__srmStableFootstepTail,
+        samePawTail: document.querySelector(`.srm-paw-tail[data-srm-symbol="${symbol}"]`) === window.__srmStablePawTail,
         opacity: Number(style.opacity),
         transitionDuration: style.transitionDuration,
         transitionProperty: style.transitionProperty,
@@ -98,7 +111,7 @@ const artifacts = path.join(__dirname, "artifacts");
       };
     }, motionSymbol);
     assert.equal(smoothFrame.sameNode, true);
-    assert.equal(smoothFrame.sameFootstepTail, true);
+    assert.equal(smoothFrame.samePawTail, true);
     assert.equal(smoothFrame.opacity, 1);
     assert.equal(smoothFrame.transitionDuration, "0.045s");
     assert.match(smoothFrame.transitionProperty, /transform/);
@@ -121,17 +134,28 @@ const artifacts = path.join(__dirname, "artifacts");
       );
     }
     const beforePlayback = Number(await page.locator("[data-srm-timeline]").getAttribute("value"));
+    const initialCatHref = await page.locator(".srm-cat-sprite").first().getAttribute("href");
+    assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-playing"), "false");
+    assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "1");
     await page.locator("[data-srm-play]").click();
+    assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-playing"), "true");
+    await page.waitForFunction(() => document.querySelector("[data-srm-root]").dataset.srmCatFrame !== "1");
+    assert.notEqual(
+      await page.locator(".srm-cat-sprite").first().getAttribute("href"),
+      initialCatHref,
+    );
     await page.waitForFunction((before) => Number(document.querySelector("[data-srm-timeline]").value) > before, beforePlayback);
     await page.locator("[data-srm-play]").click();
     assert.equal(await page.locator("[data-srm-play]").getAttribute("aria-pressed"), "false");
+    assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-playing"), "false");
+    assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "1");
 
     await page.locator("[data-srm-timeline]").fill("1967");
     await page.locator("[data-srm-universe]").selectOption("us_sectors");
     await page.locator('[data-srm-rendered="us_sectors:60"]').waitFor();
     assert.equal(await page.locator(".srm-point").count(), 11);
 
-    await page.locator('.srm-point[data-srm-symbol="XLK"]').click();
+    await page.locator('.srm-point[data-srm-symbol="XLK"] .srm-point-hitarea').click();
     await page.locator('[data-srm-rendered="us_industries:60:technology"]').waitFor();
     assert.equal(await page.locator("[data-srm-universe]").inputValue(), "us_industries");
     assert.equal(await page.locator(".srm-point").count(), 4);
@@ -179,12 +203,23 @@ const artifacts = path.join(__dirname, "artifacts");
       await mobile.locator(".srm-point").first().evaluate((node) => getComputedStyle(node).transitionDuration),
       "0s",
     );
+    assert.equal(
+      await mobile.locator(".srm-cat-sprite").evaluateAll((sprites) => sprites.every((sprite) => sprite.getAnimations().length === 0)),
+      true,
+    );
+    assert.equal(await mobile.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "1");
+    await mobile.locator("[data-srm-play]").click();
+    await mobile.waitForTimeout(220);
+    assert.equal(await mobile.locator("[data-srm-root]").getAttribute("data-srm-cat-frame"), "1");
+    await mobile.locator("[data-srm-play]").click();
     assert.equal(await mobile.locator("[data-srm-root]").getAttribute("data-srm-design"), "isometric-city-v1");
     await mobile.screenshot({ path: path.join(artifacts, "sector-rotation-editorial-mobile.png"), fullPage: true });
     await mobile.locator("[data-srm-method] summary").click();
     assert.equal(await mobile.locator("[data-srm-method]").getAttribute("open"), "");
     assert.equal(await mobile.locator(".srm-method-popover").isVisible(), true);
     assert.equal(await mobile.locator(".srm-chart-wrap").evaluate((node) => node.scrollWidth > node.clientWidth), true);
+    await mobile.locator("[data-srm-timeline]").fill("1967");
+    await mobile.locator("[data-srm-timeline]").dispatchEvent("input");
     await mobile.locator("[data-srm-universe]").selectOption("us_industries");
     await mobile.locator('[data-srm-rendered="us_industries:60:all"]').waitFor();
     assert.equal(await mobile.locator(".srm-point").count(), 20);
@@ -196,7 +231,7 @@ const artifacts = path.join(__dirname, "artifacts");
     console.log(JSON.stringify({
       status: "pass",
       url: baseUrl,
-      interactions: ["method:hover-focus-click", "timeline:2019-scrub", "timeline:smooth-node-continuity", "timeline:raf-play-pause", "speed:0.5x-2x", "universe:us_sectors", "drilldown:pointer-keyboard", "industry-filter:technology-all", "visual:isometric-platforms-footstep-tails", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
+      interactions: ["method:hover-focus-click", "timeline:2019-scrub", "timeline:smooth-node-continuity", "timeline:raf-play-pause", "speed:0.5x-2x", "universe:us_sectors", "drilldown:pointer-keyboard", "industry-filter:technology-all", "visual:isometric-platforms-pixel-cat-paws", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion"],
       screenshots: ["sector-rotation-editorial-desktop.png", "sector-rotation-global-desktop.png", "sector-rotation-industry-technology.png", "sector-rotation-desktop.png", "sector-rotation-editorial-mobile.png", "sector-rotation-industry-mobile.png", "sector-rotation-mobile.png"],
       console_errors: errors,
     }));

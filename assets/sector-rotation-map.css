@@ -616,23 +616,27 @@
 .srm-quadrant-index--weakening { fill: #eeb84a; }
 .srm-quadrant-index--lagging { fill: #a98dff; }
 
-.srm-footstep-tail {
+.srm-platform-layer {
   pointer-events: none;
 }
 
-.srm-footstep {
+.srm-paw-tail {
+  pointer-events: none;
+}
+
+.srm-cat-paw {
   fill: var(--srm-token-color, #d8b169);
   stroke: rgba(255, 255, 255, 0.52);
   stroke-width: 0.45;
 }
 
-.srm-footstep:nth-child(1) { opacity: 0.16; }
-.srm-footstep:nth-child(2) { opacity: 0.25; }
-.srm-footstep:nth-child(3) { opacity: 0.36; }
-.srm-footstep:nth-child(4) { opacity: 0.49; }
-.srm-footstep:nth-child(5) { opacity: 0.66; }
-.srm-footstep-sole { fill: var(--srm-token-color, #d8b169); }
-.srm-footstep-toe { fill: #fff; stroke: var(--srm-token-color, #d8b169); stroke-width: 0.65; }
+.srm-cat-paw:nth-child(1) { opacity: 0.16; }
+.srm-cat-paw:nth-child(2) { opacity: 0.25; }
+.srm-cat-paw:nth-child(3) { opacity: 0.36; }
+.srm-cat-paw:nth-child(4) { opacity: 0.49; }
+.srm-cat-paw:nth-child(5) { opacity: 0.66; }
+.srm-cat-paw-pad { fill: var(--srm-token-color, #d8b169); }
+.srm-cat-paw-toe { fill: #fff8e9; stroke: var(--srm-token-color, #d8b169); stroke-width: 0.48; }
 
 .srm-point {
   opacity: 1;
@@ -649,11 +653,13 @@
 }
 
 .srm-point[data-srm-drilldown-target] { cursor: pointer; }
-.srm-token-beam { stroke: var(--srm-token-color); stroke-width: 1; stroke-dasharray: 2 3; opacity: 0.22; }
-.srm-token-base { fill: var(--srm-token-color); opacity: 0.17; }
-.srm-token-column { fill: var(--srm-token-color); stroke: rgba(255, 255, 255, 0.72); stroke-width: 0.7; }
-.srm-token-halo { fill: none; stroke: var(--srm-token-color); stroke-width: 1; opacity: 0.58; }
-.srm-token-core { fill: #fff; stroke: var(--srm-token-color); stroke-width: 1.7; }
+.srm-point-hitarea { fill: transparent; pointer-events: all; }
+.srm-cat-shadow { fill: var(--srm-token-color); opacity: 0.18; }
+.srm-cat-aura { fill: color-mix(in srgb, var(--srm-token-color) 8%, transparent); stroke: var(--srm-token-color); stroke-width: 0.8; opacity: 0.55; }
+.srm-cat-sprite {
+  pointer-events: none;
+  image-rendering: pixelated;
+}
 .srm-point-label {
   paint-order: stroke;
   stroke: #06101d;
@@ -846,8 +852,7 @@
 .srm-shell[data-srm-design="isometric-city-v1"] .srm-grid { stroke: rgba(200, 217, 236, 0.09); }
 .srm-shell[data-srm-design="isometric-city-v1"] .srm-axis { stroke: rgba(216, 177, 105, 0.5); }
 .srm-shell[data-srm-design="isometric-city-v1"] .srm-point-label { stroke: #03060b; stroke-width: 4px; }
-.srm-shell[data-srm-design="isometric-city-v1"] .srm-token-column { fill-opacity: 0.82; }
-.srm-shell[data-srm-design="isometric-city-v1"] .srm-token-core { fill: #fff9ea; }
+.srm-shell[data-srm-design="isometric-city-v1"] .srm-cat-aura { stroke-width: 0.9; opacity: 0.64; }
 
 
 /* lo2cin4 editorial v2: compact research workbench */
