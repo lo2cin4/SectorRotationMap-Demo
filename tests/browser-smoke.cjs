@@ -32,6 +32,17 @@ const artifacts = path.join(__dirname, "artifacts");
     assert.equal(await page.locator(".srm-paw-tail").evaluateAll((tails) => tails.reduce((sum, tail) => sum + Number(tail.dataset.srmPawCount), 0)), 84);
     assert.equal(await page.locator(".srm-cat-sprite").count(), 21);
     assert.equal(await page.locator(".srm-cat-strip").count(), 21);
+    assert.deepEqual(
+      await page.locator("select[data-srm-avatar-role] option").evaluateAll((options) => options.map((option) => [option.value, option.textContent])),
+      [
+        ["cat", "小貓・步行"],
+        ["daozai_business", "刀仔・商業人士"],
+        ["guli_ninja", "古力・忍者"],
+        ["zhuli_scientist", "朱力・科學家"],
+      ],
+    );
+    assert.equal(await page.locator("select[data-srm-avatar-role]").inputValue(), "cat");
+    assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-avatar-motion"), "walk");
     assert.equal(await page.locator(".srm-cat-aura").count(), 0);
     assert.equal(await page.locator(".srm-cat-shadow").count(), 0);
     assert.equal(await page.locator(".srm-token-column").count(), 0);
@@ -222,6 +233,55 @@ const artifacts = path.join(__dirname, "artifacts");
       (pausedTimelineIndex % 3) + 1,
     );
 
+    const avatarCases = [
+      ["daozai_business", "avatar-daozai-business.png"],
+      ["guli_ninja", "avatar-guli-ninja.png"],
+      ["zhuli_scientist", "avatar-zhuli-scientist.png"],
+    ];
+    for (const [role, asset] of avatarCases) {
+      await page.locator("select[data-srm-avatar-role]").selectOption(role);
+      assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-avatar-role"), role);
+      assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-avatar-motion"), "soul");
+      assert.equal(await page.locator(".srm-soul-mote-trace").count(), 21);
+      assert.equal(await page.locator(".srm-cat-paw-trace").count(), 0);
+      assert.equal(await page.locator(".srm-avatar-sprite").first().getAttribute("viewBox"), "0 0 128 128");
+      assert.match(await page.locator(".srm-avatar-image").first().getAttribute("href"), new RegExp(asset.replace(".", "\\.")));
+      assert.equal(await page.locator(".srm-avatar-image").first().evaluate(async (image) => (await fetch(image.getAttribute("href"))).status), 200);
+      const staticAssetHref = await page.locator(".srm-avatar-image").first().getAttribute("href");
+      await page.locator("[data-srm-timeline]").fill("300");
+      await page.locator("[data-srm-timeline]").dispatchEvent("input");
+      const staticStart = await centerOf(motionSymbol);
+      await page.locator("[data-srm-timeline]").fill("301");
+      await page.locator("[data-srm-timeline]").dispatchEvent("input");
+      assert.equal(await page.locator(".srm-avatar-sprite").first().getAttribute("viewBox"), "0 0 128 128");
+      await page.waitForTimeout(60);
+      const staticEnd = await centerOf(motionSymbol);
+      assert.ok(distance(staticStart, staticEnd) > 0.1, `${role} must glide with the chart coordinates`);
+      await page.locator("[data-srm-timeline]").fill("302");
+      await page.locator("[data-srm-timeline]").dispatchEvent("input");
+      assert.equal(await page.locator(".srm-avatar-sprite").first().getAttribute("viewBox"), "0 0 128 128");
+      assert.equal(await page.locator(".srm-avatar-image").first().getAttribute("href"), staticAssetHref);
+      assert.equal(await page.locator(".srm-avatar-image").first().evaluate((image) => image.getAnimations().length), 0);
+      if (role === "zhuli_scientist") {
+        await page.screenshot({ path: path.join(artifacts, "sector-rotation-avatar-zhuli.png"), fullPage: true });
+      }
+    }
+    assert.equal(await page.evaluate(() => localStorage.getItem("srm-avatar-role")), "zhuli_scientist");
+    await page.reload({ waitUntil: "networkidle" });
+    await page.locator('[data-srm-rendered="global_assets:60"]').waitFor();
+    assert.equal(await page.locator("select[data-srm-avatar-role]").inputValue(), "zhuli_scientist");
+    assert.match(await page.locator(".srm-avatar-image").first().getAttribute("href"), /avatar-zhuli-scientist\.png/);
+    await page.locator("select[data-srm-avatar-role]").selectOption("cat");
+    assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-avatar-motion"), "walk");
+    assert.equal(await page.locator(".srm-cat-paw-trace").count(), 21);
+    assert.equal(await page.locator(".srm-soul-mote-trace").count(), 0);
+    assert.match(await page.locator(".srm-avatar-image").first().getAttribute("href"), /cat-walk-strip\.png/);
+    await page.evaluate(() => localStorage.setItem("srm-avatar-role", "unknown-role"));
+    await page.reload({ waitUntil: "networkidle" });
+    await page.locator('[data-srm-rendered="global_assets:60"]').waitFor();
+    assert.equal(await page.locator("select[data-srm-avatar-role]").inputValue(), "cat");
+    assert.equal(await page.locator("[data-srm-root]").getAttribute("data-srm-avatar-motion"), "walk");
+
     await page.locator("[data-srm-timeline]").fill("1967");
     await page.locator("[data-srm-universe]").selectOption("us_sectors");
     await page.locator('[data-srm-rendered="us_sectors:60"]').waitFor();
@@ -319,8 +379,8 @@ const artifacts = path.join(__dirname, "artifacts");
     console.log(JSON.stringify({
       status: "pass",
       url: baseUrl,
-      interactions: ["method:hover-focus-click", "timeline:2019-scrub", "timeline:smooth-node-continuity", "timeline:raf-play-pause", "speed:0.5x-2x", "paw-history:10-250d", "universe:us_sectors", "drilldown:pointer-keyboard", "industry-filter:technology-all", "visual:isometric-platforms-pixel-cat-paws", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion-discrete-gait"],
-      screenshots: ["sector-rotation-editorial-desktop.png", "sector-rotation-global-desktop.png", "sector-rotation-industry-technology.png", "sector-rotation-desktop.png", "sector-rotation-editorial-mobile.png", "sector-rotation-industry-mobile.png", "sector-rotation-mobile.png"],
+      interactions: ["method:hover-focus-click", "timeline:2019-scrub", "timeline:smooth-node-continuity", "timeline:raf-play-pause", "speed:0.5x-2x", "paw-history:10-250d", "avatar:cat-three-frame-static-souls-persistence-fallback", "universe:us_sectors", "drilldown:pointer-keyboard", "industry-filter:technology-all", "visual:isometric-platforms-pixel-cat-paws", "horizon:120", "point:keyboard-tooltip", "accessibility:reduced-motion-discrete-gait"],
+      screenshots: ["sector-rotation-editorial-desktop.png", "sector-rotation-global-desktop.png", "sector-rotation-avatar-zhuli.png", "sector-rotation-industry-technology.png", "sector-rotation-desktop.png", "sector-rotation-editorial-mobile.png", "sector-rotation-industry-mobile.png", "sector-rotation-mobile.png"],
       console_errors: errors,
     }));
   } finally {

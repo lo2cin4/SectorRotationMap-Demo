@@ -294,6 +294,16 @@
   margin: 30px 0 14px;
 }
 
+.srm-toolbar-fields {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.srm-avatar-picker select {
+  min-width: 190px;
+}
+
 .srm-toolbar label span {
   display: block;
   margin-bottom: 7px;
@@ -635,6 +645,14 @@
   stroke-linejoin: round;
 }
 
+.srm-soul-mote-trace {
+  fill: var(--srm-token-color, #d8b169);
+  opacity: 0.66;
+  stroke: rgba(255, 255, 255, 0.84);
+  stroke-width: 0.48;
+  stroke-linejoin: round;
+}
+
 .srm-point {
   opacity: 1;
   cursor: default;
@@ -651,10 +669,20 @@
 
 .srm-point[data-srm-drilldown-target] { cursor: pointer; }
 .srm-point-hitarea { fill: transparent; pointer-events: all; }
+.srm-avatar-sprite,
+.srm-avatar-image,
 .srm-cat-sprite,
 .srm-cat-strip {
   pointer-events: none;
   image-rendering: pixelated;
+}
+
+.srm-avatar-sprite[data-srm-motion="soul"] {
+  filter: drop-shadow(0 5px 4px rgba(0, 0, 0, 0.42));
+}
+
+.srm-avatar-sprite[data-srm-motion="soul"] .srm-avatar-image {
+  image-rendering: auto;
 }
 .srm-point-label {
   paint-order: stroke;
@@ -742,6 +770,8 @@
   .srm-method-formulas li { grid-template-columns: 1fr; gap: 4px; }
   .srm-method-quadrants { grid-template-columns: 1fr; }
   .srm-horizons { align-self: flex-start; }
+  .srm-toolbar-fields { align-items: stretch; flex-direction: column; }
+  .srm-toolbar-fields label, .srm-toolbar-fields select { width: 100%; }
   .srm-insights { grid-template-columns: 1fr 1fr; }
   .srm-insight:first-child { grid-column: 1 / -1; }
   .srm-history-controls { grid-template-columns: 1fr 1fr; }

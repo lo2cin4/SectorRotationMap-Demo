@@ -190,10 +190,20 @@ test("public page makes synthetic status and all controls explicit", async () =>
   const catFrames = await Promise.all([1, 2, 3].map((frame) => (
     readFile(new URL(`../assets/cat-walk-${frame}.png`, import.meta.url))
   )));
+  const avatarAssets = await Promise.all([
+    "avatar-daozai-business.png",
+    "avatar-guli-ninja.png",
+    "avatar-zhuli-scientist.png",
+  ].map((asset) => readFile(new URL(`../assets/${asset}`, import.meta.url))));
 
   assert.match(html, /SYNTHETIC DEMO/);
   assert.match(html, /非真實市場數據/);
   assert.match(html, /data-srm-universe/);
+  assert.match(html, /data-srm-avatar-role/);
+  assert.match(html, /<option value="cat" selected>小貓・步行<\/option>/);
+  assert.match(html, /<option value="daozai_business">刀仔・商業人士<\/option>/);
+  assert.match(html, /<option value="guli_ninja">古力・忍者<\/option>/);
+  assert.match(html, /<option value="zhuli_scientist">朱力・科學家<\/option>/);
   assert.match(html, /data-srm-horizon="20"/);
   assert.match(html, /data-srm-horizon="60"/);
   assert.match(html, /data-srm-horizon="120"/);
@@ -238,23 +248,29 @@ test("public page makes synthetic status and all controls explicit", async () =>
   assert.match(dashboardCss, /\.srm-cat-paw-trace/);
   assert.match(dashboardCss, /\.srm-drilldown/);
   assert.match(dashboardJs, /catStripUrl/);
-  assert.match(dashboardJs, /cat-walk-strip\.png\?v=0\.6\.6/);
-  assert.match(html, /sector-rotation-map\.css\?v=0\.6\.6/);
-  assert.match(html, /demo-snapshot\.js\?v=0\.6\.6/);
-  assert.match(demoJs, /sector-rotation-map\.js\?v=0\.6\.6/);
+  assert.match(dashboardJs, /cat-walk-strip\.png\?v=0\.6\.7/);
+  assert.match(dashboardJs, /avatar-daozai-business\.png\?v=0\.6\.7/);
+  assert.match(dashboardJs, /avatar-guli-ninja\.png\?v=0\.6\.7/);
+  assert.match(dashboardJs, /avatar-zhuli-scientist\.png\?v=0\.6\.7/);
+  assert.match(html, /sector-rotation-map\.css\?v=0\.6\.7/);
+  assert.match(html, /demo-snapshot\.js\?v=0\.6\.7/);
+  assert.match(demoJs, /sector-rotation-map\.js\?v=0\.6\.7/);
   assert.match(dashboardJs, /const catFrameCount = 3;/);
   assert.match(dashboardJs, /frameIndex % catFrameCount/);
   assert.doesNotMatch(dashboardJs, /!window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches/);
   assert.match(dashboardJs, /x: -22,[\s\S]*y: -35,[\s\S]*width: 44,[\s\S]*height: 44/);
   assert.doesNotMatch(dashboardJs, /catWalkBaseFrameMs|catFrameInterval|lastCatFrameTime/);
   assert.match(dashboardJs, /root\.dataset\.srmCatFrame/);
-  assert.match(dashboardJs, /class: "srm-cat-sprite"/);
-  assert.match(dashboardJs, /class: "srm-cat-strip"/);
+  assert.match(dashboardJs, /class: "srm-avatar-sprite srm-cat-sprite"/);
+  assert.match(dashboardJs, /class: "srm-avatar-image srm-cat-strip"/);
   assert.match(dashboardJs, /viewBox: "0 0 64 64"/);
   assert.match(dashboardJs, /sprite\.setAttribute\("viewBox"/);
   assert.match(pagesWorkflow, /assets\/cat-walk-\*\.png/);
   assert.match(dashboardJs, /class: "srm-point-hitarea"/);
-  assert.match(dashboardJs, /syncCatFrame/);
+  assert.match(dashboardJs, /syncAvatarRole/);
+  assert.match(dashboardJs, /const avatarStorageKey = "srm-avatar-role";/);
+  assert.match(dashboardJs, /localStorage\.setItem\(avatarStorageKey/);
+  assert.match(dashboardJs, /motion: "soul"/);
   assert.doesNotMatch(dashboardJs, /class: "srm-cat-aura"/);
   assert.doesNotMatch(dashboardCss, /\.srm-cat-aura/);
   assert.doesNotMatch(dashboardJs, /class: "srm-cat-shadow"/);
@@ -293,6 +309,14 @@ test("public page makes synthetic status and all controls explicit", async () =>
       assert.ok(changedAlphaPixels(decodedCatFrames[left], decodedCatFrames[right], fixedBodyEndY, 64) >= 100, "every leg pose needs a clearly different silhouette");
     }
   }
+  avatarAssets.map(decodeRgbaPng).forEach((avatar) => {
+    assert.deepEqual([avatar.width, avatar.height], [128, 128]);
+    assert.equal(avatar.rgba[3], 0, "avatar canvas top-left corner must be transparent");
+    const bounds = alphaBounds(avatar);
+    assert.ok(bounds[0] >= 0 && bounds[1] >= 0 && bounds[2] <= 128 && bounds[3] <= 128);
+    assert.ok(bounds[2] - bounds[0] >= 60, "avatar subject must remain visibly large");
+    assert.ok(bounds[3] - bounds[1] >= 100, "avatar subject must retain its full body");
+  });
   assert.match(dashboardCss, /font-family: var\(--srm-brand-serif\)/);
   assert.match(demoCss, /lo2cin4/);
   assert.doesNotMatch(html, /snapshots\/latest\.json|sector_rotation\.sqlite3|yfinance/i);

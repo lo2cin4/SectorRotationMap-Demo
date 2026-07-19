@@ -4,8 +4,51 @@
   const NS = "http://www.w3.org/2000/svg";
   const currentScriptUrl = document.currentScript?.src;
   const assetBaseUrl = currentScriptUrl ? new URL(".", currentScriptUrl) : new URL("assets/", document.baseURI);
-  const catStripUrl = new URL("cat-walk-strip.png?v=0.6.6", assetBaseUrl).href;
+  const catStripUrl = new URL("cat-walk-strip.png?v=0.6.7", assetBaseUrl).href;
   const catFrameCount = 3;
+  const avatarStorageKey = "srm-avatar-role";
+  const avatarRoles = {
+    cat: {
+      motion: "walk",
+      url: catStripUrl,
+      viewBox: "0 0 64 64",
+      imageWidth: 192,
+      imageHeight: 64,
+      x: -22,
+      y: -35,
+      size: 44,
+    },
+    daozai_business: {
+      motion: "soul",
+      url: new URL("avatar-daozai-business.png?v=0.6.7", assetBaseUrl).href,
+      viewBox: "0 0 128 128",
+      imageWidth: 128,
+      imageHeight: 128,
+      x: -25,
+      y: -43,
+      size: 50,
+    },
+    guli_ninja: {
+      motion: "soul",
+      url: new URL("avatar-guli-ninja.png?v=0.6.7", assetBaseUrl).href,
+      viewBox: "0 0 128 128",
+      imageWidth: 128,
+      imageHeight: 128,
+      x: -25,
+      y: -43,
+      size: 50,
+    },
+    zhuli_scientist: {
+      motion: "soul",
+      url: new URL("avatar-zhuli-scientist.png?v=0.6.7", assetBaseUrl).href,
+      viewBox: "0 0 128 128",
+      imageWidth: 128,
+      imageHeight: 128,
+      x: -25,
+      y: -43,
+      size: 50,
+    },
+  };
   const quadrantColors = {
     leading: "#ff5c8f",
     improving: "#3de1d5",
@@ -137,11 +180,21 @@
     return [pad, ...toes].join(" ");
   };
 
-  const updatePawTail = (tail, trail) => {
+  const soulMoteSubpath = (x, y, index) => {
+    const size = 1.8 + (index % 3) * 0.45;
+    const halo = size * 1.8;
+    return [
+      `M ${x.toFixed(2)} ${(y - size).toFixed(2)} L ${(x + size).toFixed(2)} ${y.toFixed(2)} L ${x.toFixed(2)} ${(y + size).toFixed(2)} L ${(x - size).toFixed(2)} ${y.toFixed(2)} Z`,
+      `M ${(x - halo).toFixed(2)} ${y.toFixed(2)} L ${x.toFixed(2)} ${(y - halo * 0.32).toFixed(2)} L ${(x + halo).toFixed(2)} ${y.toFixed(2)} L ${x.toFixed(2)} ${(y + halo * 0.32).toFixed(2)} Z`,
+    ].join(" ");
+  };
+
+  const updatePawTail = (tail, trail, motion) => {
     const history = trail.slice(0, -1);
     const signature = history.map((position) => position[0]).join("|");
-    if (tail.dataset.srmTrailSignature === signature) return;
+    if (tail.dataset.srmTrailSignature === signature && tail.dataset.srmTrailStyle === motion) return;
     tail.dataset.srmTrailSignature = signature;
+    tail.dataset.srmTrailStyle = motion;
     const pathData = history.map((position, historyIndex) => {
       const previous = history[Math.max(0, historyIndex - 1)] || position;
       const next = historyIndex + 1 < history.length ? history[historyIndex + 1] : position;
@@ -154,13 +207,15 @@
       const directionY = scaleY(directionStart[2]);
       const angle = Math.atan2(nextY - directionY, nextX - directionX) * (180 / Math.PI);
       const side = Math.floor(position[3] / pawStepSessions) % 2 === 0 ? 1 : -1;
-      return catPawSubpath(x, y, angle, side);
+      return motion === "walk"
+        ? catPawSubpath(x, y, angle, side)
+        : soulMoteSubpath(x, y, historyIndex);
     }).join(" ");
     if (tail.getAttribute("d") !== pathData) tail.setAttribute("d", pathData);
     tail.dataset.srmPawCount = String(history.length);
   };
 
-  const drawPoints = (root, svg, points, onDrilldown) => {
+  const drawPoints = (root, svg, points, onDrilldown, avatarMotion) => {
     const tooltip = root.querySelector("[data-srm-tooltip]");
     const trailsLayer = svg.querySelector("[data-srm-trails-layer]");
     const pointsLayer = svg.querySelector("[data-srm-points-layer]");
@@ -192,7 +247,11 @@
           pawTail.setAttribute("data-srm-category", point.category || point.asset_class || "quadrant");
           trailsLayer.appendChild(pawTail);
         }
-        updatePawTail(pawTail, trail);
+        const trailClassName = avatarMotion === "walk"
+          ? "srm-paw-tail srm-cat-paw-trace"
+          : "srm-paw-tail srm-soul-mote-trace";
+        if (pawTail.getAttribute("class") !== trailClassName) pawTail.setAttribute("class", trailClassName);
+        updatePawTail(pawTail, trail, avatarMotion);
       } else {
         existingTrails.get(point.symbol)?.remove();
       }
@@ -218,7 +277,7 @@
           width: 44,
           height: 44,
           viewBox: "0 0 64 64",
-          class: "srm-cat-sprite",
+          class: "srm-avatar-sprite srm-cat-sprite",
           preserveAspectRatio: "xMidYMid meet",
           overflow: "hidden",
           "aria-hidden": "true",
@@ -229,7 +288,7 @@
           y: 0,
           width: 192,
           height: 64,
-          class: "srm-cat-strip",
+          class: "srm-avatar-image srm-cat-strip",
           preserveAspectRatio: "none",
           "aria-hidden": "true",
         }));
@@ -457,6 +516,7 @@
       const playButton = root.querySelector("[data-srm-play]");
       const speedSelect = root.querySelector("[data-srm-speed]");
       const trailWindowSelect = root.querySelector("[data-srm-trail-window]");
+      const avatarSelect = root.querySelector("select[data-srm-avatar-role]");
       const playbackBaseIntervalMs = 50;
       let horizon = "60";
       let selectedDate = null;
@@ -464,14 +524,40 @@
       let activeCategory = null;
       let returnUniverseId = null;
       let renderedChromeSignature = null;
+      let avatarRole = "cat";
+      try {
+        const storedRole = window.localStorage.getItem(avatarStorageKey);
+        if (storedRole && Object.hasOwn(avatarRoles, storedRole)) avatarRole = storedRole;
+      } catch (error) {
+        console.warn("Sector Rotation Map could not read the saved avatar role", error);
+      }
+      if (avatarSelect) avatarSelect.value = avatarRole;
       root.dataset.srmPlaying = "false";
       root.dataset.srmCatFrame = "1";
 
-      const syncCatFrame = (frameIndex) => {
-        root.dataset.srmCatFrame = String(frameIndex + 1);
-        const viewBox = `${frameIndex * 64} 0 64 64`;
-        chart.querySelectorAll(".srm-cat-sprite").forEach((sprite) => {
+      const syncAvatarRole = (frameIndex) => {
+        const role = avatarRoles[avatarRole] || avatarRoles.cat;
+        const viewBox = role.motion === "walk"
+          ? `${frameIndex * 64} 0 64 64`
+          : role.viewBox;
+        if (root.dataset.srmAvatarRole !== avatarRole) root.dataset.srmAvatarRole = avatarRole;
+        if (root.dataset.srmAvatarMotion !== role.motion) root.dataset.srmAvatarMotion = role.motion;
+        root.dataset.srmCatFrame = role.motion === "walk" ? String(frameIndex + 1) : "static";
+        chart.querySelectorAll(".srm-avatar-sprite").forEach((sprite) => {
           if (sprite.getAttribute("viewBox") !== viewBox) sprite.setAttribute("viewBox", viewBox);
+          if (sprite.getAttribute("x") !== String(role.x)) sprite.setAttribute("x", role.x);
+          if (sprite.getAttribute("y") !== String(role.y)) sprite.setAttribute("y", role.y);
+          if (sprite.getAttribute("width") !== String(role.size)) sprite.setAttribute("width", role.size);
+          if (sprite.getAttribute("height") !== String(role.size)) sprite.setAttribute("height", role.size);
+          if (sprite.dataset.srmAvatarRole !== avatarRole) sprite.dataset.srmAvatarRole = avatarRole;
+          if (sprite.dataset.srmMotion !== role.motion) sprite.dataset.srmMotion = role.motion;
+          const image = sprite.querySelector(".srm-avatar-image");
+          if (!image) return;
+          if (image.getAttribute("href") !== role.url) image.setAttribute("href", role.url);
+          if (image.getAttribute("width") !== String(role.imageWidth)) image.setAttribute("width", role.imageWidth);
+          if (image.getAttribute("height") !== String(role.imageHeight)) image.setAttribute("height", role.imageHeight);
+          const preserveAspectRatio = role.motion === "walk" ? "none" : "xMidYMid meet";
+          if (image.getAttribute("preserveAspectRatio") !== preserveAspectRatio) image.setAttribute("preserveAspectRatio", preserveAspectRatio);
         });
       };
 
@@ -591,11 +677,12 @@
           universeSelect.value = target.id;
           render();
         };
-        drawPoints(root, chart, points, activateDrilldown);
+        const avatarMotion = (avatarRoles[avatarRole] || avatarRoles.cat).motion;
+        drawPoints(root, chart, points, activateDrilldown, avatarMotion);
         const catFrameIndex = frameIndex >= 0
           ? frameIndex % catFrameCount
           : 0;
-        syncCatFrame(catFrameIndex);
+        syncAvatarRole(catFrameIndex);
         const nextChromeSignature = `${universe.id}:${activeCategory || "all"}:${points.map(({ symbol }) => symbol).join(",")}`;
         if (nextChromeSignature !== renderedChromeSignature) {
           drawLegend(root, universe, points);
@@ -703,6 +790,17 @@
       });
       trailWindowSelect?.addEventListener("change", () => {
         stopPlayback();
+        render();
+      });
+      avatarSelect?.addEventListener("change", () => {
+        stopPlayback();
+        avatarRole = Object.hasOwn(avatarRoles, avatarSelect.value) ? avatarSelect.value : "cat";
+        avatarSelect.value = avatarRole;
+        try {
+          window.localStorage.setItem(avatarStorageKey, avatarRole);
+        } catch (error) {
+          console.warn("Sector Rotation Map could not save the avatar role", error);
+        }
         render();
       });
       syncMotionDuration();

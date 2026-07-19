@@ -230,7 +230,7 @@ export const buildSyntheticSnapshot = () => {
 const mountDemo = async () => {
   const snapshotNode = document.querySelector("[data-srm-snapshot]");
   snapshotNode.textContent = JSON.stringify(buildSyntheticSnapshot());
-  await import("./assets/sector-rotation-map.js?v=0.6.6");
+  await import("./assets/sector-rotation-map.js?v=0.6.7");
 };
 
 if (typeof document !== "undefined") {

@@ -37,7 +37,7 @@ jobs:
         run: |
           mkdir -p _site/assets
           cp index.html demo-snapshot.js _site/
-          cp assets/demo.css assets/favicon.svg assets/sector-rotation-map.css assets/sector-rotation-map.js assets/cat-walk-*.png _site/assets/
+          cp assets/demo.css assets/favicon.svg assets/sector-rotation-map.css assets/sector-rotation-map.js assets/cat-walk-*.png assets/avatar-*.png _site/assets/
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4

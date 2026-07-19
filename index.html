@@ -8,7 +8,7 @@
     <title>Sector Rotation Map · Synthetic Preview</title>
     <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="./assets/demo.css">
-    <link rel="stylesheet" href="./assets/sector-rotation-map.css?v=0.6.6">
+    <link rel="stylesheet" href="./assets/sector-rotation-map.css?v=0.6.7">
   </head>
   <body>
     <main class="demo-page">
@@ -16,7 +16,7 @@
         <a class="demo-mark" href="./" aria-label="Sector Rotation Map 首頁">
           <strong>lo2cin4</strong><span>/</span><em>SR MAP</em>
         </a>
-        <p>MEMBER RESEARCH SYSTEM <span>05</span> · v0.6.6</p>
+        <p>MEMBER RESEARCH SYSTEM <span>05</span> · v0.6.7</p>
       </header>
 
       <aside class="demo-banner" role="note">
@@ -90,10 +90,21 @@
 
         <section class="srm-workbench" aria-label="輪動圖控制台">
           <div class="srm-toolbar">
-          <label>
-            <span>觀察範圍</span>
-            <select data-srm-universe aria-label="觀察範圍"></select>
-          </label>
+          <div class="srm-toolbar-fields">
+            <label>
+              <span>觀察範圍</span>
+              <select data-srm-universe aria-label="觀察範圍"></select>
+            </label>
+            <label class="srm-avatar-picker">
+              <span>移動角色</span>
+              <select data-srm-avatar-role aria-label="選擇移動角色">
+                <option value="cat" selected>小貓・步行</option>
+                <option value="daozai_business">刀仔・商業人士</option>
+                <option value="guli_ninja">古力・忍者</option>
+                <option value="zhuli_scientist">朱力・科學家</option>
+              </select>
+            </label>
+          </div>
           <div class="srm-horizons" aria-label="時間層級">
             <button type="button" data-srm-horizon="20">20日</button>
             <button type="button" class="is-active" data-srm-horizon="60">60日</button>
@@ -146,8 +157,8 @@
               </select>
             </label>
             <label class="srm-trail-window">
-              <span>貓掌足跡</span>
-              <select data-srm-trail-window aria-label="貓掌足跡回看交易日">
+              <span>移動軌跡</span>
+              <select data-srm-trail-window aria-label="移動軌跡回看交易日">
                 <option value="10">10日</option>
                 <option value="20" selected>20日</option>
                 <option value="50">50日</option>
@@ -191,6 +202,6 @@
         <span>DESIGN PREVIEW / 2026</span>
       </footer>
     </main>
-    <script type="module" src="./demo-snapshot.js?v=0.6.6"></script>
+    <script type="module" src="./demo-snapshot.js?v=0.6.7"></script>
   </body>
 </html>
