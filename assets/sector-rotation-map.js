@@ -4,7 +4,7 @@
   const NS = "http://www.w3.org/2000/svg";
   const currentScriptUrl = document.currentScript?.src;
   const assetBaseUrl = currentScriptUrl ? new URL(".", currentScriptUrl) : new URL("assets/", document.baseURI);
-  const catStripUrl = new URL("cat-walk-strip.png?v=0.6.7", assetBaseUrl).href;
+  const catStripUrl = new URL("cat-walk-strip.png?v=0.6.8", assetBaseUrl).href;
   const catFrameCount = 3;
   const avatarStorageKey = "srm-avatar-role";
   const avatarRoles = {
@@ -20,7 +20,7 @@
     },
     daozai_business: {
       motion: "soul",
-      url: new URL("avatar-daozai-business.png?v=0.6.7", assetBaseUrl).href,
+      url: new URL("avatar-daozai-business.png?v=0.6.8", assetBaseUrl).href,
       viewBox: "0 0 128 128",
       imageWidth: 128,
       imageHeight: 128,
@@ -30,7 +30,7 @@
     },
     guli_ninja: {
       motion: "soul",
-      url: new URL("avatar-guli-ninja.png?v=0.6.7", assetBaseUrl).href,
+      url: new URL("avatar-guli-ninja.png?v=0.6.8", assetBaseUrl).href,
       viewBox: "0 0 128 128",
       imageWidth: 128,
       imageHeight: 128,
@@ -40,7 +40,7 @@
     },
     zhuli_scientist: {
       motion: "soul",
-      url: new URL("avatar-zhuli-scientist.png?v=0.6.7", assetBaseUrl).href,
+      url: new URL("avatar-zhuli-scientist.png?v=0.6.8", assetBaseUrl).href,
       viewBox: "0 0 128 128",
       imageWidth: 128,
       imageHeight: 128,
